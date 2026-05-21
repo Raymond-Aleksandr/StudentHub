@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "studenthub-syllabus-parser",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://raymond-aleksandr.github.io",
+    "MAX_FILE_BYTES": "8388608",
+    "OPENROUTER_MODEL": "google/gemini-2.5-flash",
+    "OPENROUTER_PDF_ENGINE": "cloudflare-ai",
+    "OPENROUTER_SITE_URL": "https://raymond-aleksandr.github.io/studenthub/",
+    "OPENROUTER_APP_NAME": "StudentHub"
+  }
+}

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>StudentHub Redirect</title>
+    <script>
+      (function () {
+        var pathname = window.location.pathname
+        var search = window.location.search || ''
+        var hash = window.location.hash || ''
+        var firstPathSegment = pathname.split('/').filter(Boolean)[0] || ''
+        var repoBase = firstPathSegment ? '/' + firstPathSegment : ''
+        var appPath = pathname.indexOf(repoBase) === 0 ? pathname.slice(repoBase.length) : pathname
+        var normalizedPath = appPath || '/'
+        var encodedSearch = search ? search.replace(/\?/g, '&').replace(/&/g, '~and~') : ''
+
+        window.location.replace(repoBase + '/?/' + normalizedPath.slice(1) + encodedSearch + hash)
+      })()
+    </script>
+  </head>
+  <body></body>
+</html>

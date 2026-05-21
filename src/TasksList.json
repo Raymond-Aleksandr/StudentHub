@@ -1,0 +1,52 @@
+[
+  {
+    "course_name": "IRM 3004 / OSS 3009 - Project Management (Winter 2026)",
+    "deliverables": [
+      {
+        "deliverable_name": "Tutorial Submissions",
+        "date": 1775606400,
+        "priority": "low"
+      },
+      {
+        "deliverable_name": "Project Start: Team Formation",
+        "date": 1768435200,
+        "priority": "low"
+      },
+      {
+        "deliverable_name": "Assignment 1: Ideation",
+        "date": 1769904000,
+        "priority": "low"
+      },
+      {
+        "deliverable_name": "Assignment 2: Risk Management",
+        "date": 1771804800,
+        "priority": "low"
+      },
+      {
+        "deliverable_name": "Project Iteration: Sprint Evaluations",
+        "date": 1773532800,
+        "priority": "high"
+      },
+      {
+        "deliverable_name": "Project End: Delivered Product Graded",
+        "date": 1774137600,
+        "priority": "medium"
+      },
+      {
+        "deliverable_name": "Post-Project: Presentations",
+        "date": 1774915200,
+        "priority": "medium"
+      },
+      {
+        "deliverable_name": "Post-Project: Evaluation Report",
+        "date": 1775606400,
+        "priority": "low"
+      },
+      {
+        "deliverable_name": "Final Exam",
+        "date": 1776470400,
+        "priority": "high"
+      }
+    ]
+  }
+]

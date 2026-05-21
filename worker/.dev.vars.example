@@ -1,0 +1,7 @@
+OPENROUTER_API_KEY=your-local-openrouter-key
+ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
+MAX_FILE_BYTES=8388608
+OPENROUTER_MODEL=google/gemini-2.5-flash
+OPENROUTER_PDF_ENGINE=cloudflare-ai
+OPENROUTER_SITE_URL=http://127.0.0.1:5173
+OPENROUTER_APP_NAME=StudentHub

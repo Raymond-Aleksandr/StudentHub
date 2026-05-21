@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StudentHub - Private Study Planner</title>
+    <script>
+      (function () {
+        var search = window.location.search
+        if (!search || search.indexOf('?/') !== 0) return
+        var baseUrl = '%BASE_URL%'
+        var repoBase = baseUrl === '/' ? '' : baseUrl.replace(/\/$/, '')
+
+        var pathname = search
+          .replace(/^\?\//, '/')
+          .replace(/&/g, '?')
+          .replace(/~and~/g, '&')
+
+        var target = repoBase + pathname + window.location.hash
+        window.history.replaceState(null, '', target)
+      })()
+    </script>
+    <style>
+      /* Critical CSS - prevent layout shift */
+      *, *::before, *::after { box-sizing: border-box; }
+      body { 
+        margin: 0; 
+        padding: 0; 
+        background-color: #09090B; 
+        color: #FAFAFA;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      .navbar { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        right: 0; 
+        height: 64px; 
+        background: rgba(9, 9, 11, 0.8);
+        backdrop-filter: blur(20px);
+        z-index: 100;
+      }
+      section { scroll-margin-top: 64px; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

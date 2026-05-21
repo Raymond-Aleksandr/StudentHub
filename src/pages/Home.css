@@ -1,0 +1,561 @@
+.home {
+  min-height: 100vh;
+  background: #f5f7fb;
+  color: #172033;
+}
+
+.home button {
+  font: inherit;
+}
+
+.home-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 66px;
+  padding: 0 clamp(16px, 4vw, 42px);
+  border-bottom: 1px solid rgba(217, 224, 236, 0.82);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(18px);
+}
+
+.home-brand,
+.home-links button,
+.home-mobile-menu button,
+.home-menu-button,
+.home-primary,
+.home-secondary {
+  border: 0;
+  appearance: none;
+  cursor: pointer;
+}
+
+.home-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #172033;
+  background: transparent;
+  transition: transform 150ms ease;
+}
+
+.home-brand:hover {
+  transform: translateY(-1px);
+}
+
+.home-brand span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #2563eb;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.home-brand strong {
+  font-size: 1rem;
+}
+
+.home-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-links button,
+.home-mobile-menu button {
+  min-height: 40px;
+  padding: 0 13px;
+  border-radius: 8px;
+  color: #697386;
+  background: transparent;
+  font-weight: 800;
+  transition: transform 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.home-links button:hover,
+.home-mobile-menu button:hover {
+  color: #172033;
+  background: #eef4ff;
+  transform: translateY(-1px);
+}
+
+.home-menu-button {
+  width: 42px;
+  height: 42px;
+  display: none;
+  place-items: center;
+  border-radius: 8px;
+  color: #172033;
+  background: #eef2f7;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.home-menu-button:hover {
+  background: #eaf1ff;
+  transform: translateY(-1px);
+}
+
+.home-mobile-menu {
+  position: fixed;
+  top: 66px;
+  left: 12px;
+  right: 12px;
+  z-index: 80;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #d9e0ec;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(32, 42, 68, 0.11);
+  animation: home-menu-in 180ms ease both;
+}
+
+.home-hero {
+  position: relative;
+  min-height: 92vh;
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+  padding: 116px clamp(18px, 6vw, 78px) 76px;
+  background:
+    linear-gradient(90deg, rgba(245, 247, 251, 0.98) 0%, rgba(245, 247, 251, 0.82) 44%, rgba(245, 247, 251, 0.36) 100%),
+    #dbe8f7;
+}
+
+.home-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(37, 99, 235, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 159, 154, 0.08) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.home-hero-copy {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 52vw, 620px);
+  animation: home-rise 520ms ease both;
+}
+
+.home-eyebrow {
+  display: block;
+  color: #697386;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.home-hero-copy h1,
+.home-section-head h2,
+.home-privacy h2 {
+  margin: 8px 0 0;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.home-hero-copy h1 {
+  font-size: clamp(3.8rem, 9vw, 6.8rem);
+}
+
+.home-hero-copy p {
+  max-width: 520px;
+  margin: 18px 0 0;
+  color: #4f5b70;
+  font-size: clamp(1.02rem, 2vw, 1.24rem);
+  line-height: 1.55;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.home-primary,
+.home-secondary {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-weight: 900;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.home-primary {
+  color: #ffffff;
+  background: #2563eb;
+}
+
+.home-secondary {
+  color: #2563eb;
+  background: #eaf1ff;
+}
+
+.home-primary:hover,
+.home-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.home-primary:hover {
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.24);
+}
+
+.home-primary:active,
+.home-secondary:active,
+.home-menu-button:active,
+.home-links button:active,
+.home-mobile-menu button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.home-hero-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 92px clamp(18px, 5vw, 72px) 46px;
+  animation: home-fade-in 680ms 120ms ease both;
+}
+
+.home-phone {
+  width: min(34vw, 370px);
+  min-width: 290px;
+  transform: rotate(2deg);
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 10px solid #172033;
+  border-radius: 30px;
+  background: #f5f7fb;
+  box-shadow: 0 28px 80px rgba(23, 32, 51, 0.22);
+  animation: home-phone-float 7s ease-in-out infinite;
+}
+
+.home-phone-top,
+.home-upload-strip,
+.home-task,
+.home-tabs {
+  border: 1px solid #d9e0ec;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.home-phone-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.home-phone-top span,
+.home-task small {
+  color: #697386;
+  font-weight: 800;
+}
+
+.home-upload-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  color: #0f766e;
+  background: #eaf8f1;
+  font-weight: 900;
+}
+
+.home-task-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.home-task {
+  display: grid;
+  gap: 5px;
+  padding: 14px 14px 14px 18px;
+  box-shadow: inset 4px 0 0 #0f9f9a;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.home-task:hover {
+  box-shadow:
+    inset 4px 0 0 #0f9f9a,
+    0 10px 22px rgba(32, 42, 68, 0.08);
+  transform: translateY(-1px);
+}
+
+.home-task span {
+  color: #2563eb;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.home-task strong {
+  color: #172033;
+}
+
+.home-tabs {
+  display: flex;
+  justify-content: space-around;
+  padding: 12px;
+  color: #697386;
+}
+
+.home-section,
+.home-privacy {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 72px 0;
+}
+
+.home-section-head {
+  max-width: 650px;
+}
+
+.home-section-head h2,
+.home-privacy h2 {
+  font-size: clamp(2rem, 5vw, 3.6rem);
+}
+
+.home-point-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.home-point {
+  min-height: 210px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #d9e0ec;
+  border-radius: 8px;
+  background: #ffffff;
+  animation: home-rise 420ms ease both;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.home-point:nth-child(2) { animation-delay: 50ms; }
+.home-point:nth-child(3) { animation-delay: 100ms; }
+.home-point:nth-child(4) { animation-delay: 150ms; }
+
+.home-point:hover {
+  border-color: #c7d2e4;
+  box-shadow: 0 16px 34px rgba(32, 42, 68, 0.1);
+  transform: translateY(-2px);
+}
+
+.home-point svg {
+  color: #0f9f9a;
+}
+
+.home-point h3 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.home-point p,
+.home-privacy p,
+.home-privacy li {
+  color: #4f5b70;
+  line-height: 1.55;
+}
+
+.home-point p {
+  margin: 0;
+}
+
+.home-privacy {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 30px;
+  align-items: center;
+  animation: home-rise 420ms ease both;
+}
+
+.home-privacy p {
+  max-width: 620px;
+  margin: 18px 0 0;
+}
+
+.home-privacy ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-privacy li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid #d9e0ec;
+  border-radius: 8px;
+  background: #ffffff;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.home-privacy li:hover {
+  border-color: #c7d2e4;
+  box-shadow: 0 12px 26px rgba(32, 42, 68, 0.08);
+  transform: translateY(-1px);
+}
+
+.home-privacy li svg {
+  flex: 0 0 auto;
+  color: #12805c;
+  margin-top: 2px;
+}
+
+@media (max-width: 900px) {
+  .home-links {
+    display: none;
+  }
+
+  .home-menu-button {
+    display: grid;
+  }
+
+  .home-hero {
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    padding-bottom: 44px;
+  }
+
+  .home-hero-copy {
+    order: 1;
+    width: min(100%, 640px);
+  }
+
+  .home-hero-scene {
+    position: relative;
+    inset: auto;
+    order: 2;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 0 0;
+  }
+
+  .home-phone {
+    width: min(92vw, 370px);
+    min-width: 0;
+    animation-name: home-phone-float-mobile;
+  }
+
+  .home-point-grid,
+  .home-privacy {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes home-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes home-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-phone-float {
+  0%, 100% {
+    transform: translateY(0) rotate(2deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+@keyframes home-phone-float-mobile {
+  0%, 100% {
+    transform: translateY(0) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-mobile-menu,
+  .home-hero-copy,
+  .home-hero-scene,
+  .home-phone,
+  .home-point,
+  .home-privacy {
+    animation: none;
+  }
+
+  .home-brand,
+  .home-links button,
+  .home-mobile-menu button,
+  .home-menu-button,
+  .home-primary,
+  .home-secondary,
+  .home-task,
+  .home-point,
+  .home-privacy li {
+    transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .home-hero {
+    padding-inline: 16px;
+  }
+
+  .home-hero-copy h1 {
+    font-size: clamp(3.25rem, 17vw, 4.5rem);
+  }
+
+  .home-primary,
+  .home-secondary {
+    width: 100%;
+  }
+}

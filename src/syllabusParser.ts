@@ -1,11 +1,11 @@
-import type { StoredCalendarEvent, StoredClassInfo } from './storage'
+import type { CalendarEvent, ClassInfo } from './domain/types'
 
 const DEFAULT_SYLLABUS_PARSER_URL = 'https://studenthub-syllabus-parser.h-5c7.workers.dev/parse'
 const LOCAL_SYLLABUS_PARSER_URL = 'http://127.0.0.1:8787/parse'
 
 export interface ParsedSyllabusData {
-  course: Partial<StoredClassInfo>
-  events: StoredCalendarEvent[]
+  course: Partial<ClassInfo>
+  events: CalendarEvent[]
   rawText: string
   source: 'worker'
 }
@@ -22,7 +22,7 @@ function normalizeWorkerResponse(data: Partial<ParsedSyllabusData>): ParsedSylla
   }
 }
 
-function getWorkerEndpoint() {
+function getWorkerEndpoint(): string {
   const configuredEndpoint = import.meta.env.VITE_SYLLABUS_PARSER_URL?.trim()
   if (configuredEndpoint) return configuredEndpoint
 
@@ -31,15 +31,12 @@ function getWorkerEndpoint() {
     return LOCAL_SYLLABUS_PARSER_URL
   }
 
+  // Production: use default Worker URL unless overridden
   return DEFAULT_SYLLABUS_PARSER_URL
 }
 
 export async function parseSyllabusPdf(file: File): Promise<ParsedSyllabusData> {
   const endpoint = getWorkerEndpoint()
-
-  if (!endpoint) {
-    throw new Error('Syllabus import requires a configured Cloudflare Worker parser. Set VITE_SYLLABUS_PARSER_URL and try again.')
-  }
 
   const formData = new FormData()
   formData.append('file', file)
@@ -75,9 +72,7 @@ export async function parseSyllabusPdf(file: File): Promise<ParsedSyllabusData> 
         ? `Local syllabus parser Worker is not reachable at ${endpoint}. Start it with npm run worker:dev and configure worker/.dev.vars.`
         : 'Syllabus parser Worker is unreachable. Check the Worker URL, deployment status, and allowed origin configuration.')
     }
-    if (error instanceof Error) {
-      throw error
-    }
+    if (error instanceof Error) throw error
     throw new Error('Syllabus parser Worker is unavailable.')
   } finally {
     window.clearTimeout(timeoutId)

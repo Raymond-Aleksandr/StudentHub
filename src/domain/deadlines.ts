@@ -1,5 +1,3 @@
-import type { StoredCalendarEvent } from './storage'
-
 export const DEADLINE_TYPES = [
   'assignment',
   'quiz',
@@ -41,11 +39,10 @@ export function normalizeDeadlineType(value?: string, fallbackType?: 'assignment
   if (value && DEADLINE_TYPES.includes(value as DeadlineType)) {
     return value as DeadlineType
   }
-
   return fallbackType === 'exam' ? 'exam' : 'assignment'
 }
 
-export function getStoredEventDeadlineType(event: Pick<StoredCalendarEvent, 'type' | 'deadlineType'>): DeadlineType {
+export function getEventDeadlineType(event: { type: 'assignment' | 'exam'; deadlineType?: DeadlineType }): DeadlineType {
   return normalizeDeadlineType(event.deadlineType, event.type)
 }
 
@@ -83,14 +80,7 @@ export function getUrgencyClass(dateStr: string): 'urgent' | 'warning' | 'calm' 
   return 'calm'
 }
 
-export function deadlineDateToPriority(dateStr: string): 'high' | 'medium' | 'low' {
-  const urgency = getUrgencyClass(dateStr)
-  if (urgency === 'urgent') return 'high'
-  if (urgency === 'warning') return 'medium'
-  return 'low'
-}
-
-export function isSameCalendarEvent(left: StoredCalendarEvent, right: StoredCalendarEvent) {
+export function isSameCalendarEvent<T extends { title: string; courseCode?: string; date: string; time: string; priority: string; type: string; deadlineType?: string; sourceUploadId?: string }>(left: T, right: T): boolean {
   return (
     left.title === right.title &&
     (left.courseCode ?? '') === (right.courseCode ?? '') &&
@@ -103,10 +93,10 @@ export function isSameCalendarEvent(left: StoredCalendarEvent, right: StoredCale
   )
 }
 
-export function getEventTimestamp(event: Pick<StoredCalendarEvent, 'date' | 'time'>): number {
+export function getEventTimestamp(event: { date: string; time: string }): number {
   return new Date(`${event.date}T${event.time || '23:59'}`).getTime()
 }
 
-export function sortEventsByDate<T extends Pick<StoredCalendarEvent, 'date' | 'time'>>(events: T[]): T[] {
+export function sortEventsByDate<T extends { date: string; time: string }>(events: T[]): T[] {
   return [...events].sort((a, b) => getEventTimestamp(a) - getEventTimestamp(b))
 }

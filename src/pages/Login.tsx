@@ -155,12 +155,12 @@ function Login() {
               <small>8 dates added</small>
             </div>
             <div className="login-preview-item">
-              <span>IRM3001</span>
+              <span>BIO210</span>
               <strong>Assignment</strong>
               <small>Tomorrow</small>
             </div>
             <div className="login-preview-item">
-              <span>IRM 3004</span>
+              <span>HIST330</span>
               <strong>Team formation</strong>
               <small>Next week</small>
             </div>

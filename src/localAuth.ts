@@ -26,6 +26,33 @@ function emailToUid(email: string) {
   return `local:${email.trim().toLowerCase()}`
 }
 
+// Password hashing via Web Crypto (PBKDF2).
+
+async function hashPassword(password: string, salt?: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const actualSalt = salt || crypto.randomUUID()
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits'],
+  )
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: encoder.encode(actualSalt), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256,
+  )
+  const hashArray = Array.from(new Uint8Array(bits))
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+  return `${actualSalt}:${hashHex}`
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const colonIndex = stored.indexOf(':')
+  if (colonIndex < 0) return false
+  const salt = stored.substring(0, colonIndex)
+  const candidate = await hashPassword(password, salt)
+  return candidate === stored
+}
+
+// Auth state.
+
 function readCurrentUser() {
   return readJson<LocalUser | null>(currentUserKey, null)
 }
@@ -42,9 +69,7 @@ export const auth: { currentUser: LocalUser | null } = {
 export function onAuthStateChanged(_auth: typeof auth, listener: AuthListener) {
   listeners.add(listener)
   queueMicrotask(() => listener(auth.currentUser))
-  return () => {
-    listeners.delete(listener)
-  }
+  return () => { listeners.delete(listener) }
 }
 
 export async function createUserWithEmailAndPassword(_auth: typeof auth, email: string, password: string) {
@@ -55,7 +80,7 @@ export async function createUserWithEmailAndPassword(_auth: typeof auth, email: 
     throw new Error('Email already exists on this browser.')
   }
 
-  accounts[normalizedEmail] = password
+  accounts[normalizedEmail] = await hashPassword(password)
   writeJson(accountsKey, accounts)
 
   auth.currentUser = { uid: emailToUid(normalizedEmail), email: normalizedEmail }
@@ -68,7 +93,8 @@ export async function signInWithEmailAndPassword(_auth: typeof auth, email: stri
   const normalizedEmail = email.trim().toLowerCase()
   const accounts = readJson<Record<string, string>>(accountsKey, {})
 
-  if (accounts[normalizedEmail] !== password) {
+  const storedHash = accounts[normalizedEmail]
+  if (!storedHash || !(await verifyPassword(password, storedHash))) {
     throw new Error('Invalid email or password for this browser.')
   }
 

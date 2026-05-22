@@ -34,8 +34,8 @@ const points = [
   },
   {
     icon: Cloud,
-    title: 'Bring your own worker',
-    body: 'Use the included Cloudflare Worker template for stronger parsing without shipping secrets.',
+    title: 'Deploy your Worker',
+    body: 'Syllabus parsing requires a Cloudflare Worker so API keys never ship in the frontend.',
   },
   {
     icon: ShieldCheck,
@@ -60,7 +60,11 @@ function Home() {
   }
 
   const goToSection = (id: string) => {
-    document.querySelector(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const target = document.querySelector<HTMLElement>(id)
+    if (target) {
+      const top = target.getBoundingClientRect().top + window.scrollY - 72
+      window.scrollTo({ top, behavior: 'smooth' })
+    }
     setMenuOpen(false)
   }
 
@@ -124,7 +128,7 @@ function Home() {
             <span className="home-eyebrow">Private study planner</span>
             <h1>StudentHub</h1>
             <p>
-              Upload course syllabi, then keep tasks, exams, courses, and reminders in one mobile-first planner.
+              Upload syllabi through your Worker, then keep tasks, exams, courses, and reminders in one mobile-first planner.
             </p>
             <div className="home-actions">
               <button className="home-primary" onClick={launchApp}>
@@ -162,7 +166,7 @@ function Home() {
             <span className="home-eyebrow">Deployment model</span>
             <h2>No secrets in the public frontend.</h2>
             <p>
-              StudentHub runs as a static Pages app with local browser storage by default. The Worker template is recommended for syllabus parsing, and Firebase can be added later for real accounts and cross-device sync.
+              StudentHub runs as a static Pages app with local browser storage by default. A Cloudflare Worker is required for syllabus parsing, and Firebase can be added later for real accounts and cross-device sync.
             </p>
           </div>
           <ul>

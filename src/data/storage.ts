@@ -1,65 +1,7 @@
-import { normalizeDeadlineType, type DeadlineType } from './deadlines'
+import { normalizeDeadlineType } from '../domain/deadlines'
+import type { CalendarEvent, ClassInfo, SyllabusUpload } from '../domain/types'
 
 export type Unsubscribe = () => void
-
-export interface StoredCalendarEvent {
-  title: string
-  courseCode?: string
-  date: string
-  time: string
-  priority: 'high' | 'medium' | 'low'
-  type: 'assignment' | 'exam'
-  deadlineType?: DeadlineType
-  sourceUploadId?: string
-  completed?: boolean
-  reminderDaysBefore?: number
-}
-
-export interface StoredClassInfo {
-  id: number
-  title: string
-  code: string
-  day: string
-  startTime: string
-  endTime: string
-  time: string
-  location: string
-  profName: string
-  profEmail: string
-  taName: string
-  taEmail: string
-  sourceUploadId?: string
-}
-
-export interface StoredSyllabusUpload {
-  id: string
-  name: string
-  url: string
-  storagePath: string
-  status: 'processing' | 'review' | 'done' | 'error'
-  message: string
-  parsedCourse?: {
-    title: string
-    code: string
-    day: string
-    startTime: string
-    endTime: string
-    location: string
-    profName: string
-    profEmail: string
-    taName: string
-    taEmail: string
-  }
-  parsedEvents?: Array<{
-    title: string
-    courseCode?: string
-    date: string
-    time: string
-    type: 'assignment' | 'exam'
-    deadlineType?: DeadlineType
-    priority: 'high' | 'medium' | 'low'
-  }>
-}
 
 const subscribers = new Map<string, Set<() => void>>()
 
@@ -98,7 +40,9 @@ function subscribeToKey(key: string, listener: () => void): Unsubscribe {
   }
 }
 
-function normalizeCalendarEvent(event: Partial<StoredCalendarEvent>): StoredCalendarEvent {
+// Normalization.
+
+function normalizeCalendarEvent(event: Partial<CalendarEvent>): CalendarEvent {
   return {
     title: event.title ?? '',
     courseCode: event.courseCode ?? '',
@@ -115,7 +59,7 @@ function normalizeCalendarEvent(event: Partial<StoredCalendarEvent>): StoredCale
   }
 }
 
-function normalizeClass(course: Partial<StoredClassInfo>, index: number): StoredClassInfo {
+function normalizeClass(course: Partial<ClassInfo>, index: number): ClassInfo {
   return {
     id: course.id ?? index,
     title: course.title ?? '',
@@ -133,7 +77,7 @@ function normalizeClass(course: Partial<StoredClassInfo>, index: number): Stored
   }
 }
 
-function normalizeUpload(upload: Partial<StoredSyllabusUpload>): StoredSyllabusUpload {
+function normalizeUpload(upload: Partial<SyllabusUpload>): SyllabusUpload {
   return {
     id: upload.id ?? '',
     name: upload.name ?? 'Untitled syllabus',
@@ -169,63 +113,63 @@ function normalizeUpload(upload: Partial<StoredSyllabusUpload>): StoredSyllabusU
   }
 }
 
-export function getDefaultClasses(): StoredClassInfo[] {
-  return []
-}
+// Public API.
 
 export function subscribeToCalendarEvents(
   uid: string,
-  onChange: (events: StoredCalendarEvent[]) => void,
-) : Unsubscribe {
+  onChange: (events: CalendarEvent[]) => void,
+): Unsubscribe {
   const key = getStorageKey(uid, 'calendar')
   return subscribeToKey(key, () => {
-    const data = readJson<{ events?: Partial<StoredCalendarEvent>[] }>(key, {})
+    const data = readJson<{ events?: Partial<CalendarEvent>[] }>(key, {})
     const events = Array.isArray(data.events)
-      ? data.events.map((event: Partial<StoredCalendarEvent>) => normalizeCalendarEvent(event))
+      ? data.events.map((event: Partial<CalendarEvent>) => normalizeCalendarEvent(event))
       : []
-
     onChange(events)
   })
 }
 
-export async function saveCalendarEvents(uid: string, events: StoredCalendarEvent[]) {
-  writeJson(getStorageKey(uid, 'calendar'), { events: events.map((event) => normalizeCalendarEvent(event)) })
+export async function saveCalendarEvents(uid: string, events: CalendarEvent[]) {
+  writeJson(getStorageKey(uid, 'calendar'), { events: events.map(normalizeCalendarEvent) })
 }
 
 export function subscribeToClasses(
   uid: string,
-  onChange: (classes: StoredClassInfo[]) => void,
-) : Unsubscribe {
+  onChange: (classes: ClassInfo[]) => void,
+): Unsubscribe {
   const key = getStorageKey(uid, 'classes')
   return subscribeToKey(key, () => {
-    const data = readJson<{ classes?: Partial<StoredClassInfo>[] }>(key, {})
+    const data = readJson<{ classes?: Partial<ClassInfo>[] }>(key, {})
     const classes = Array.isArray(data.classes)
-      ? data.classes.map((course: Partial<StoredClassInfo>, index: number) => normalizeClass(course, index))
-      : getDefaultClasses()
-
+      ? data.classes.map((course: Partial<ClassInfo>, index: number) => normalizeClass(course, index))
+      : []
     onChange(classes)
   })
 }
 
-export async function saveClasses(uid: string, classes: StoredClassInfo[]) {
+export async function saveClasses(uid: string, classes: ClassInfo[]) {
   writeJson(getStorageKey(uid, 'classes'), { classes: classes.map((course, index) => normalizeClass(course, index)) })
 }
 
 export function subscribeToSyllabusUploads(
   uid: string,
-  onChange: (uploads: StoredSyllabusUpload[]) => void,
+  onChange: (uploads: SyllabusUpload[]) => void,
 ): Unsubscribe {
   const key = getStorageKey(uid, 'syllabi')
   return subscribeToKey(key, () => {
-    const data = readJson<{ uploads?: Partial<StoredSyllabusUpload>[] }>(key, {})
+    const data = readJson<{ uploads?: Partial<SyllabusUpload>[] }>(key, {})
     const uploads = Array.isArray(data.uploads)
-      ? data.uploads.map((upload: Partial<StoredSyllabusUpload>) => normalizeUpload(upload))
+      ? data.uploads.map((upload: Partial<SyllabusUpload>) => normalizeUpload(upload))
       : []
-
     onChange(uploads)
   })
 }
 
-export async function saveSyllabusUploads(uid: string, uploads: StoredSyllabusUpload[]) {
-  writeJson(getStorageKey(uid, 'syllabi'), { uploads: uploads.map((upload) => normalizeUpload(upload)) })
+export async function saveSyllabusUploads(uid: string, uploads: SyllabusUpload[]) {
+  writeJson(getStorageKey(uid, 'syllabi'), { uploads: uploads.map(normalizeUpload) })
 }
+
+// Legacy type aliases for backward compatibility.
+export type StoredCalendarEvent = CalendarEvent
+export type StoredClassInfo = ClassInfo
+export type StoredSyllabusUpload = SyllabusUpload

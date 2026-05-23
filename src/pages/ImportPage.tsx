@@ -5,6 +5,7 @@ import { usePlanner } from '../data/usePlanner'
 import { deadlineTypeToEventType, getEventDeadlineType } from '../domain/deadlines'
 import type { SyllabusUpload } from '../domain/types'
 import { getSyllabusParserEndpoint } from '../syllabusParser'
+import { tagVarForColor } from '../domain/courseMeta'
 
 type ParserStatus = {
   tone: 'checking' | 'online' | 'blocked' | 'offline'
@@ -157,12 +158,12 @@ export default function ImportPage() {
           const counts = getUploadCounts(upload)
           return (
             <article key={upload.id} className="syllabus-row card card-tight">
-              <div className="sr-ico" style={{ '--tag': 'var(--accent)' } as CSSProperties}>
+              <div className="sr-ico" style={{ '--tag': tagVarForColor(upload.parsedCourse?.color) } as CSSProperties}>
                 <Sparkles size={18} />
               </div>
               <div className="sr-body">
                 <div className="sr-top">
-                  <span className="tag" style={{ '--tag': 'var(--accent)' } as CSSProperties}>{upload.parsedCourse?.code || 'PDF'}</span>
+                  <span className="tag" style={{ '--tag': tagVarForColor(upload.parsedCourse?.color) } as CSSProperties}>{upload.parsedCourse?.code || 'PDF'}</span>
                   <span className="sr-name">{upload.name}</span>
                 </div>
                 <div className="sr-meta mono">{counts.courses} course · {counts.tasks} tasks · {counts.exams} exams</div>
@@ -187,7 +188,7 @@ export default function ImportPage() {
               <button className="tp-close" onClick={() => setEditingUpload(null)} aria-label="Close"><X size={18} /></button>
             </div>
             <div className="modal-body">
-              <div className="syllabus-preview" style={{ '--tag': 'var(--accent)' } as CSSProperties}>
+              <div className="syllabus-preview" style={{ '--tag': tagVarForColor(uploadDraft.parsedCourse?.color) } as CSSProperties}>
                 <div className="sp-ico"><Sparkles size={20} /></div>
                 <div className="sp-info">
                   <span className="mono sp-name">{editingUpload.name}</span>
@@ -217,6 +218,9 @@ export default function ImportPage() {
                         profEmail: uploadDraft.parsedCourse?.profEmail ?? '',
                         taName: uploadDraft.parsedCourse?.taName ?? '',
                         taEmail: uploadDraft.parsedCourse?.taEmail ?? '',
+                        grade: uploadDraft.parsedCourse?.grade ?? null,
+                        progress: uploadDraft.parsedCourse?.progress ?? null,
+                        color: uploadDraft.parsedCourse?.color ?? '',
                         code: event.target.value,
                       },
                     })}

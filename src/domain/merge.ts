@@ -1,5 +1,6 @@
 import type { CalendarEvent, ClassInfo } from './types'
 import { deadlineTypeToEventType, isSameCalendarEvent, sortEventsByDate } from './deadlines'
+import { normalizeCourseColor, normalizePercent, normalizeWeight } from './courseMeta'
 
 // Course helpers.
 
@@ -57,6 +58,9 @@ export function normalizeCourse(
     profEmail: parsedCourse.profEmail ?? '',
     taName: parsedCourse.taName ?? '',
     taEmail: parsedCourse.taEmail ?? '',
+    grade: normalizePercent(parsedCourse.grade),
+    progress: normalizePercent(parsedCourse.progress),
+    color: normalizeCourseColor(parsedCourse.color, classes.length),
     sourceUploadId: uploadId,
   }
 }
@@ -72,6 +76,10 @@ export function normalizeEvents(events: Partial<CalendarEvent>[], uploadId: stri
         courseCode: event.courseCode ?? '',
         date: event.date ?? '',
         time: event.time ?? '',
+        weight: normalizeWeight(event.weight),
+        score: normalizePercent(event.score),
+        location: event.location ?? '',
+        format: event.format ?? '',
         priority: event.priority ?? (type === 'exam' ? 'high' : 'low'),
         type,
         deadlineType,

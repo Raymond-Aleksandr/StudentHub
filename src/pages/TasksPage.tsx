@@ -108,6 +108,10 @@ function newTaskDraft(): DraftEvent {
     courseCode: '',
     date: toDateId(date),
     time: '23:59',
+    weight: 3,
+    score: null,
+    location: '',
+    format: '',
     deadlineType: 'assignment',
   }
 }

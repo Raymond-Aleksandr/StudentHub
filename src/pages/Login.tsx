@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
-import { auth, createUserWithEmailAndPassword, signInAsDemoUser, signInWithEmailAndPassword } from '../localAuth'
+import { auth, createUserWithEmailAndPassword, signInAsBlankUser, signInWithEmailAndPassword } from '../localAuth'
 import './Login.css'
 
 function Login() {
@@ -44,7 +44,7 @@ function Login() {
     setError('')
     setIsLoading(true)
     try {
-      await signInAsDemoUser(auth)
+      await signInAsBlankUser(auth)
       navigate('/dashboard')
     } catch (err: unknown) {
       const nextError = err as { message?: string }
@@ -82,7 +82,7 @@ function Login() {
             </h1>
             <p className="signin-lede">
               A local account for this browser, or jump into a blank local profile to test syllabus
-              parsing and term planning without sample data.
+              parsing and term planning without starter data.
             </p>
 
             <div className="signin-tabs" role="tablist" aria-label="Sign in mode">
@@ -157,10 +157,10 @@ function Login() {
 
             <div className="signin-divider">or</div>
 
-            <div className="signin-demo">
+            <div className="signin-blank">
               <div>
                 <b>Blank profile</b>
-                <span>No sample courses · ready for your syllabi</span>
+                <span>No starter courses · ready for your syllabi</span>
               </div>
               <button className="btn btn-soft" onClick={handleBlankProfile} disabled={isLoading}>
                 Open <ArrowRight size={14} />

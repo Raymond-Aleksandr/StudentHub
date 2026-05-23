@@ -3,21 +3,26 @@ import type { CSSProperties } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { usePlanner } from '../data/usePlanner'
 import { CALENDAR_WEEKDAYS, buildCalendarDays, formatMonthLabel, formatSelectedDate, getLocalDateId, parseDateId } from '../domain/calendar'
-import { deadlineTypeToEventType, getEventDeadlineType } from '../domain/deadlines'
+import { deadlineTypeToEventType, formatDeadlineType, getEventDeadlineType } from '../domain/deadlines'
 import { sortEventsByDate } from '../domain/deadlines'
 import { EventEditModal } from '../components/EventCard'
 import type { CalendarEvent } from '../domain/types'
+import { splitCourseCodes, tagForEventCourse } from '../domain/courseMeta'
 
-const tagVars = ['var(--tag-ochre)', 'var(--tag-plum)', 'var(--tag-slate)', 'var(--tag-sage)', 'var(--tag-teal)']
-
-function tagFor(courseCode: string) {
-  let hash = 0
-  for (const char of courseCode.replace(/\s+/g, '')) hash += char.charCodeAt(0)
-  return tagVars[hash % tagVars.length]
+function CalendarCourseChips({ courseCode, fallback, tag }: { courseCode: string; fallback: string; tag: string }) {
+  const codes = splitCourseCodes(courseCode)
+  const labels = codes.length ? codes : [fallback]
+  return (
+    <span className="cd-pill-group" aria-label={courseCode || fallback}>
+      {labels.map((code) => (
+        <span key={code} className="cd-pill" style={{ '--tag': tag } as CSSProperties}>{code}</span>
+      ))}
+    </span>
+  )
 }
 
 export default function CalendarPage() {
-  const { events, updateEvent, removeEvent } = usePlanner()
+  const { classes, events, updateEvent, removeEvent } = usePlanner()
   const todayId = getLocalDateId(new Date())
   const [selectedDate, setSelectedDate] = useState(todayId)
   const [calendarMonth, setCalendarMonth] = useState(() => new Date())
@@ -70,7 +75,7 @@ export default function CalendarPage() {
                   <div className="cal-pips">
                     {dayEvents.slice(0, 3).map((event, pipIndex) => {
                       const isExam = deadlineTypeToEventType(getEventDeadlineType(event)) === 'exam'
-                      return <span key={`${event.title}-${pipIndex}`} className={`pip ${isExam ? 'exam' : 'task'}`} style={{ background: isExam ? 'var(--accent)' : tagFor(event.courseCode) }} />
+                      return <span key={`${event.title}-${pipIndex}`} className={`pip ${isExam ? 'exam' : 'task'}`} style={{ background: tagForEventCourse(classes, event.courseCode) }} />
                     })}
                     {dayEvents.length > 3 && <span className="pip-more mono">+{dayEvents.length - 3}</span>}
                   </div>
@@ -89,12 +94,16 @@ export default function CalendarPage() {
           <div className="cd-list">
             {selectedDateEvents.length ? selectedDateEvents.map((event) => {
               const isExam = deadlineTypeToEventType(getEventDeadlineType(event)) === 'exam'
+              const tag = tagForEventCourse(classes, event.courseCode)
               return (
                 <button key={`${event.title}-${event.date}-${event.time}-${event.sourceUploadId}`} className="cd-item" onClick={() => setEditing(event)}>
-                  <span className="cd-pill" style={{ '--tag': isExam ? 'var(--accent)' : tagFor(event.courseCode) } as CSSProperties}>{isExam ? 'EXAM' : event.courseCode || 'TASK'}</span>
+                  <CalendarCourseChips courseCode={event.courseCode} fallback={isExam ? 'EXAM' : 'TASK'} tag={tag} />
                   <div className="cd-body">
                     <div className="cd-title">{event.title}</div>
-                    <div className="cd-meta mono">{event.time || '23:59'} · {event.courseCode || 'Unassigned'} {getEventDeadlineType(event)}</div>
+                    <div className="cd-meta mono">
+                      {event.time || '23:59'} · {formatDeadlineType(getEventDeadlineType(event))}
+                      {event.weight !== null && event.weight !== undefined ? ` · ${event.weight}% term` : ''}
+                    </div>
                   </div>
                 </button>
               )

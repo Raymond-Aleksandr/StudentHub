@@ -1,4 +1,5 @@
 import { normalizeDeadlineType } from '../domain/deadlines'
+import { normalizeCourseColor, normalizePercent, normalizeWeight } from '../domain/courseMeta'
 import type { CalendarEvent, ClassInfo, SyllabusUpload } from '../domain/types'
 
 export type Unsubscribe = () => void
@@ -24,7 +25,7 @@ function writeJson(key: string, value: unknown) {
 }
 
 function isBlankProfile(uid: string) {
-  return uid === 'local:demo'
+  return uid === 'local:blank'
 }
 
 function subscribeToKey(key: string, listener: () => void): Unsubscribe {
@@ -52,6 +53,10 @@ function normalizeCalendarEvent(event: Partial<CalendarEvent>): CalendarEvent {
     courseCode: event.courseCode ?? '',
     date: event.date ?? '',
     time: event.time ?? '',
+    weight: normalizeWeight(event.weight),
+    score: normalizePercent(event.score),
+    location: event.location ?? '',
+    format: event.format ?? '',
     priority: event.priority === 'medium' || event.priority === 'low' ? event.priority : 'high',
     type: event.type === 'exam' ? 'exam' : 'assignment',
     deadlineType: normalizeDeadlineType(event.deadlineType, event.type === 'exam' ? 'exam' : 'assignment'),
@@ -77,6 +82,9 @@ function normalizeClass(course: Partial<ClassInfo>, index: number): ClassInfo {
     profEmail: course.profEmail ?? '',
     taName: course.taName ?? '',
     taEmail: course.taEmail ?? '',
+    grade: normalizePercent(course.grade),
+    progress: normalizePercent(course.progress),
+    color: normalizeCourseColor(course.color, index),
     sourceUploadId: course.sourceUploadId ?? '',
   }
 }
@@ -101,6 +109,9 @@ function normalizeUpload(upload: Partial<SyllabusUpload>): SyllabusUpload {
           profEmail: upload.parsedCourse.profEmail ?? '',
           taName: upload.parsedCourse.taName ?? '',
           taEmail: upload.parsedCourse.taEmail ?? '',
+          grade: normalizePercent(upload.parsedCourse.grade),
+          progress: normalizePercent(upload.parsedCourse.progress),
+          color: normalizeCourseColor(upload.parsedCourse.color),
         }
       : undefined,
     parsedEvents: Array.isArray(upload.parsedEvents)
@@ -109,6 +120,10 @@ function normalizeUpload(upload: Partial<SyllabusUpload>): SyllabusUpload {
           courseCode: event.courseCode ?? '',
           date: event.date ?? '',
           time: event.time ?? '',
+          weight: normalizeWeight(event.weight),
+          score: normalizePercent(event.score),
+          location: event.location ?? '',
+          format: event.format ?? '',
           type: event.type === 'exam' ? 'exam' : 'assignment',
           deadlineType: normalizeDeadlineType(event.deadlineType, event.type === 'exam' ? 'exam' : 'assignment'),
           priority: event.priority === 'medium' || event.priority === 'low' ? event.priority : 'high',
@@ -129,14 +144,11 @@ export function subscribeToCalendarEvents(
     const events = Array.isArray(data.events)
       ? data.events.map((event: Partial<CalendarEvent>) => normalizeCalendarEvent(event))
       : []
-    const visibleEvents = isBlankProfile(uid)
-      ? events.filter((event) => !event.sourceUploadId.startsWith('demo-'))
-      : events
-    if (visibleEvents.length !== events.length) {
-      writeJson(key, { events: visibleEvents })
+    if (isBlankProfile(uid) && events.length) {
+      writeJson(key, { events: [] })
       return
     }
-    onChange(visibleEvents)
+    onChange(events)
   })
 }
 
@@ -154,14 +166,11 @@ export function subscribeToClasses(
     const classes = Array.isArray(data.classes)
       ? data.classes.map((course: Partial<ClassInfo>, index: number) => normalizeClass(course, index))
       : []
-    const visibleClasses = isBlankProfile(uid)
-      ? classes.filter((course) => !course.sourceUploadId.startsWith('demo-'))
-      : classes
-    if (visibleClasses.length !== classes.length) {
-      writeJson(key, { classes: visibleClasses })
+    if (isBlankProfile(uid) && classes.length) {
+      writeJson(key, { classes: [] })
       return
     }
-    onChange(visibleClasses)
+    onChange(classes)
   })
 }
 
@@ -179,14 +188,11 @@ export function subscribeToSyllabusUploads(
     const uploads = Array.isArray(data.uploads)
       ? data.uploads.map((upload: Partial<SyllabusUpload>) => normalizeUpload(upload))
       : []
-    const visibleUploads = isBlankProfile(uid)
-      ? uploads.filter((upload) => !upload.id.startsWith('demo-'))
-      : uploads
-    if (visibleUploads.length !== uploads.length) {
-      writeJson(key, { uploads: visibleUploads })
+    if (isBlankProfile(uid) && uploads.length) {
+      writeJson(key, { uploads: [] })
       return
     }
-    onChange(visibleUploads)
+    onChange(uploads)
   })
 }
 

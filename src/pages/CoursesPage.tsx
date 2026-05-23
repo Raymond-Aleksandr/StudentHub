@@ -4,12 +4,19 @@ import { Check, ChevronLeft, Clock, MapPin, Pencil, Plus, Trash2, UserRound, X }
 import { usePlanner } from '../data/usePlanner'
 import { getDaysUntil } from '../domain/deadlines'
 import type { ClassInfo } from '../domain/types'
+import { courseColorOptions, courseMatchesEvent, normalizePercent, splitCourseCodes, tagForCourse, tagVarForColor } from '../domain/courseMeta'
+import { getCourseGrade, getWeightStats } from '../domain/grades'
 import { EventCard } from '../components/EventCard'
 
-const tagVars = ['var(--tag-ochre)', 'var(--tag-plum)', 'var(--tag-slate)', 'var(--tag-sage)', 'var(--tag-teal)']
-
-function tagFor(index: number) {
-  return tagVars[index % tagVars.length]
+function CourseCodePills({ code, tag }: { code: string; tag: string }) {
+  const codes = splitCourseCodes(code)
+  return (
+    <span className="code-pill-group" aria-label={code || 'Course'}>
+      {(codes.length ? codes : ['Course']).map((courseCode) => (
+        <span key={courseCode} className="tag-pill" style={{ '--tag': tag } as CSSProperties}>{courseCode}</span>
+      ))}
+    </span>
+  )
 }
 
 export default function CoursesPage() {
@@ -33,16 +40,19 @@ export default function CoursesPage() {
       profEmail: '',
       taName: '',
       taEmail: '',
+      grade: null,
+      progress: null,
+      color: '',
       sourceUploadId: '',
     }
     setEditingCourse(course ?? null)
     setCourseDraft(draft)
   }
 
-  const patchDraft = (field: keyof ClassInfo, value: string) => {
+  const patchDraft = (field: keyof ClassInfo, value: string | number | null) => {
     setCourseDraft((current) => {
       if (!current) return current
-      const next = { ...current, [field]: value }
+      const next = { ...current, [field]: field === 'grade' || field === 'progress' ? normalizePercent(value) : value }
       if (field === 'startTime' || field === 'endTime') {
         next.time = [next.startTime, next.endTime].filter(Boolean).join(' - ')
       }
@@ -71,7 +81,7 @@ export default function CoursesPage() {
     if (!draft.title && !draft.code) return
 
     if (editingCourse) {
-      const fields: Array<Exclude<keyof ClassInfo, 'id'>> = ['title', 'code', 'day', 'startTime', 'endTime', 'time', 'location', 'profName', 'profEmail', 'taName', 'taEmail']
+      const fields: Array<Exclude<keyof ClassInfo, 'id'>> = ['title', 'code', 'day', 'startTime', 'endTime', 'time', 'location', 'profName', 'profEmail', 'taName', 'taEmail', 'grade', 'progress', 'color', 'sourceUploadId']
       for (const field of fields) {
         if (editingCourse[field] !== draft[field]) {
           await updateCourse(editingCourse.id, field, draft[field])
@@ -80,7 +90,7 @@ export default function CoursesPage() {
       setSelectedId((current) => current === editingCourse.id ? editingCourse.id : current)
     } else {
       const id = await addCourse(draft)
-      if (id) setSelectedId(id)
+      if (id !== undefined) setSelectedId(id)
     }
     closeCourseEditor()
   }
@@ -105,12 +115,15 @@ export default function CoursesPage() {
 
   if (selected) {
     const index = classes.findIndex((course) => course.id === selected.id)
-    const tag = tagFor(index)
-    const tasks = taskEvents.filter((event) => event.courseCode === selected.code)
+    const tag = tagForCourse(selected, index)
+    const tasks = taskEvents.filter((event) => courseMatchesEvent(selected, event))
     const open = tasks.filter((event) => !event.completed)
     const done = tasks.filter((event) => event.completed)
-    const exams = examEvents.filter((event) => event.courseCode === selected.code && !event.completed)
-    const taskCompletion = tasks.length ? Math.round((done.length / tasks.length) * 100) : null
+    const allExams = examEvents.filter((event) => courseMatchesEvent(selected, event))
+    const exams = allExams.filter((event) => !event.completed)
+    const weightStats = getWeightStats([...tasks, ...allExams])
+    const termProgress = weightStats.progress ?? selected.progress ?? 0
+    const grade = getCourseGrade(selected, [...tasks, ...allExams])
 
     return (
       <>
@@ -137,16 +150,15 @@ export default function CoursesPage() {
 
         <div className="stats stats-4" style={{ marginTop: 22 }}>
           <div className="stat" style={{ cursor: 'default' }}>
-            <span className="eyebrow">Tracked items</span>
-            <span className="stat-n serif">{tasks.length + exams.length}</span>
-            <span className="stat-sub">{tasks.length} tasks · {exams.length} exams</span>
+            <span className="eyebrow">{grade.source === 'computed' ? 'Running grade' : 'Grade estimate'}</span>
+            <span className="stat-n serif">{grade.value ?? '—'}{grade.value !== null && <small>%</small>}</span>
+            <span className="stat-sub">{grade.source === 'computed' ? `${grade.gradedWeight}% graded weight` : 'manual, set in edit'}</span>
           </div>
           <div className="stat" style={{ cursor: 'default' }}>
-            <span className="eyebrow">Tasks done</span>
-            <span className="stat-n serif">{taskCompletion ?? '—'}{taskCompletion !== null && <small>%</small>}</span>
-            {taskCompletion !== null
-              ? <div className="stat-bar"><div style={{ width: `${taskCompletion}%`, background: tag }} /></div>
-              : <span className="stat-sub">No tasks yet</span>}
+            <span className="eyebrow">Term progress</span>
+            <span className="stat-n serif">{termProgress}<small>%</small></span>
+            <div className="stat-bar"><div style={{ width: `${termProgress}%`, background: tag }} /></div>
+            <span className="stat-sub">{weightStats.total ? `${weightStats.assessed}% of ${weightStats.total}% assessed` : 'No weighted items'}</span>
           </div>
           <div className="stat" style={{ cursor: 'default' }}>
             <span className="eyebrow">Open tasks</span>
@@ -156,7 +168,7 @@ export default function CoursesPage() {
           <div className="stat" style={{ cursor: 'default' }}>
             <span className="eyebrow">Next exam</span>
             <span className="stat-n serif">{exams[0] ? getDaysUntil(exams[0].date) : '—'}{exams[0] && <small>d</small>}</span>
-            <span className="stat-sub">{exams[0]?.title ?? 'None scheduled'}</span>
+            <span className="stat-sub">{exams[0] ? `${exams[0].title}${exams[0].weight ? ` · ${exams[0].weight}%` : ''}` : 'None scheduled'}</span>
           </div>
         </div>
 
@@ -174,9 +186,9 @@ export default function CoursesPage() {
               <span className="mono">{exams[0] ? `${exams[0].title} in ${getDaysUntil(exams[0].date)}d` : 'none scheduled'}</span>
             </div>
             <div>
-              <span className="eyebrow">Completed</span>
-              <strong className="serif">{done.length}</strong>
-              <span className="mono">{tasks.length ? `${tasks.length} total tasks` : 'no task history'}</span>
+              <span className="eyebrow">Weighted items</span>
+              <strong className="serif">{weightStats.total || '—'}{weightStats.total ? <small>%</small> : null}</strong>
+              <span className="mono">{weightStats.assessed}% already assessed</span>
             </div>
           </div>
         </section>
@@ -200,19 +212,21 @@ export default function CoursesPage() {
     <>
       <section className="course-grid">
         {classes.map((course, index) => {
-          const tag = tagFor(index)
-          const tasks = taskEvents.filter((event) => event.courseCode === course.code)
+          const tag = tagForCourse(course, index)
+          const tasks = taskEvents.filter((event) => courseMatchesEvent(course, event))
           const open = tasks.filter((event) => !event.completed).length
-          const done = tasks.filter((event) => event.completed).length
-          const nextExam = examEvents.filter((event) => event.courseCode === course.code && !event.completed)[0]
-          const taskCompletion = tasks.length ? Math.round((done / tasks.length) * 100) : null
+          const nextExam = examEvents.filter((event) => courseMatchesEvent(course, event) && !event.completed)[0]
+          const courseExams = examEvents.filter((event) => courseMatchesEvent(course, event))
+          const weightStats = getWeightStats([...tasks, ...courseExams])
+          const termProgress = weightStats.progress ?? course.progress ?? 0
+          const grade = getCourseGrade(course, [...tasks, ...courseExams])
 
           return (
             <article key={course.id} className="course-card card" style={{ '--tag': tag } as CSSProperties}>
               <button className="course-card-main" onClick={() => setSelectedId(course.id)}>
                 <div className="cc-stripe" />
                 <div className="cc-top">
-                  <span className="tag-pill" style={{ '--tag': tag } as CSSProperties}>{course.code || 'Course'}</span>
+                  <CourseCodePills code={course.code} tag={tag} />
                   <span className="mono cc-count">{tasks.length + (nextExam ? 1 : 0)} items</span>
                 </div>
                 <h3 className="serif">{course.title || 'Untitled course'}</h3>
@@ -220,20 +234,18 @@ export default function CoursesPage() {
                   <span><Clock size={12} /> {[course.day, course.time || course.startTime].filter(Boolean).join(' · ') || 'No schedule set'}</span>
                   <span><MapPin size={12} /> {course.location || 'No room set'}</span>
                 </div>
-                {taskCompletion !== null && (
-                  <div className="cc-progress">
-                    <div className="cc-progress-bar"><div style={{ width: `${taskCompletion}%` }} /></div>
-                    <span className="mono">{taskCompletion}% tasks done</span>
-                  </div>
-                )}
+                <div className="cc-progress">
+                  <div className="cc-progress-bar"><div style={{ width: `${termProgress}%` }} /></div>
+                  <span className="mono">{termProgress}% assessed</span>
+                </div>
                 <div className="cc-foot">
                   <div className="cc-stat">
                     <span className="serif">{open}</span>
                     <span className="mono">open tasks</span>
                   </div>
                   <div className="cc-stat">
-                    <span className="serif">{taskCompletion ?? '—'}{taskCompletion !== null && <small>%</small>}</span>
-                    <span className="mono">tasks done</span>
+                    <span className="serif">{grade.value ?? '—'}{grade.value !== null && <small>%</small>}</span>
+                    <span className="mono">{grade.source === 'computed' ? 'running' : 'estimate'}</span>
                   </div>
                   <div className="cc-stat">
                     <span className="serif">{nextExam ? getDaysUntil(nextExam.date) : '—'}{nextExam && <small>d</small>}</span>
@@ -270,7 +282,7 @@ function CourseEditorModal({
 }: {
   draft: ClassInfo
   isNew: boolean
-  onPatch: (field: keyof ClassInfo, value: string) => void
+  onPatch: (field: keyof ClassInfo, value: string | number | null) => void
   onClose: () => void
   onSave: () => void
   onDelete?: () => void
@@ -323,6 +335,34 @@ function CourseEditorModal({
             <span>Location</span>
             <input className="modal-input" value={draft.location} onChange={(event) => onPatch('location', event.target.value)} placeholder="Location" />
           </label>
+
+          <section className="modal-field">
+            <span>Course color</span>
+            <div className="course-color-row" role="radiogroup" aria-label="Course color">
+              {courseColorOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`course-color-swatch ${draft.color === option.id ? 'active' : ''}`}
+                  style={{ '--tag': tagVarForColor(option.id) } as CSSProperties}
+                  onClick={() => onPatch('color', option.id)}
+                  aria-label={option.label}
+                  aria-pressed={draft.color === option.id}
+                />
+              ))}
+            </div>
+          </section>
+
+          <div className="modal-grid two">
+            <label className="modal-field">
+              <span>Manual grade estimate</span>
+              <input className="modal-input" type="number" min="0" max="100" value={draft.grade ?? ''} onChange={(event) => onPatch('grade', event.target.value)} placeholder="%" />
+            </label>
+            <label className="modal-field">
+              <span>Term progress</span>
+              <input className="modal-input" type="number" min="0" max="100" value={draft.progress ?? ''} onChange={(event) => onPatch('progress', event.target.value)} placeholder="%" />
+            </label>
+          </div>
 
           <div className="modal-grid two">
             <label className="modal-field">

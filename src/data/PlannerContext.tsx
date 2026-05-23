@@ -11,6 +11,7 @@ import {
 import type { CalendarEvent, ClassInfo, SyllabusUpload, DraftEvent, ImportState } from '../domain/types'
 import { deadlineTypeToEventType, formatCountdown, getDaysUntil, getEventDeadlineType, isSameCalendarEvent, sortEventsByDate } from '../domain/deadlines'
 import { mergeCourse, mergeEvents, normalizeCourse, normalizeEvents, nextCourseId } from '../domain/merge'
+import { normalizePercent, normalizeWeight } from '../domain/courseMeta'
 import { WEEKDAYS } from '../domain/calendar'
 import { parseSyllabusPdf } from '../syllabusParser'
 
@@ -31,7 +32,7 @@ interface PlannerActions {
   updateEvent: (target: CalendarEvent, draft: DraftEvent) => Promise<void>
   // Courses
   addCourse: (draft?: Partial<ClassInfo>) => Promise<number | undefined>
-  updateCourse: (id: number, field: keyof ClassInfo, value: string) => Promise<void>
+  updateCourse: (id: number, field: keyof ClassInfo, value: string | number | null) => Promise<void>
   removeCourse: (id: number) => Promise<void>
   // Uploads
   importFiles: (files: FileList) => Promise<void>
@@ -150,6 +151,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       courseCode: draft.courseCode,
       date: draft.date,
       time: draft.time,
+      weight: normalizeWeight(draft.weight),
+      score: normalizePercent(draft.score),
+      location: draft.location.trim(),
+      format: draft.format.trim(),
       type,
       deadlineType: draft.deadlineType,
       priority: type === 'exam' ? 'high' : 'medium',
@@ -171,6 +176,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         courseCode: draft.courseCode,
         date: draft.date,
         time: draft.time,
+        weight: normalizeWeight(draft.weight),
+        score: normalizePercent(draft.score),
+        location: draft.location.trim(),
+        format: draft.format.trim(),
         type,
         deadlineType: draft.deadlineType,
         priority: type === 'exam' ? 'high' : e.priority,
@@ -188,17 +197,18 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         id,
         title: '', code: '', day: '', startTime: '', endTime: '',
         time: '', location: '', profName: '', profEmail: '',
-        taName: '', taEmail: '', sourceUploadId: '',
+        taName: '', taEmail: '', grade: null, progress: null, color: '', sourceUploadId: '',
         ...draft,
       },
     ])
     return id
   }
 
-  const updateCourse = async (id: number, field: keyof ClassInfo, value: string) => {
+  const updateCourse = async (id: number, field: keyof ClassInfo, value: string | number | null) => {
     const nextClasses = classes.map((c) => {
       if (c.id !== id) return c
-      const next = { ...c, [field]: value }
+      const normalizedValue = field === 'grade' || field === 'progress' ? normalizePercent(value) : value
+      const next = { ...c, [field]: normalizedValue }
       if (field === 'startTime' || field === 'endTime') {
         next.time = [next.startTime, next.endTime].filter(Boolean).join(' - ')
       }
@@ -251,6 +261,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
             startTime: parsedCourse.startTime, endTime: parsedCourse.endTime,
             location: parsedCourse.location, profName: parsedCourse.profName,
             profEmail: parsedCourse.profEmail, taName: parsedCourse.taName, taEmail: parsedCourse.taEmail,
+            grade: parsedCourse.grade, progress: parsedCourse.progress, color: parsedCourse.color,
           } : undefined,
           parsedEvents: parsedEventList,
         }

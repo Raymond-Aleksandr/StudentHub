@@ -18,13 +18,13 @@ import { auth, onAuthStateChanged } from '../localAuth'
 import './Home.css'
 
 const marqueeItems = [
-  'Bio 210 · Lab Report',
-  'Hist 330 · Research Outline',
-  'Math 240 · Midterm',
-  'Econ 101 · Quiz',
-  'Phil 220 · Essay',
-  'Psych 305 · Group Project',
-  'Cs 251 · Pset 6',
+  'Course · Lab report',
+  'Course · Research outline',
+  'Course · Midterm',
+  'Course · Quiz',
+  'Course · Essay',
+  'Course · Group project',
+  'Course · Problem set',
 ]
 
 const steps = [
@@ -170,7 +170,7 @@ function Home() {
       <header className="landing-hero">
         <div className="landing-hero-grid">
           <div>
-            <span className="landing-kicker"><span /> Private study planner · v2.4</span>
+            <span className="landing-kicker"><span /> Private study planner</span>
             <h1 className="landing-h1">
               Drop a&nbsp;PDF.
               <br />
@@ -370,15 +370,6 @@ function Home() {
         </div>
       </section>
 
-      <section className="landing-cta">
-        <h2>Plan the term in <em>under a minute.</em></h2>
-        <p>Open the planner in your browser. No install, no required account. Drop a PDF when you're ready.</p>
-        <div>
-          <button className="btn btn-primary" onClick={launchApp}>Open the planner</button>
-          <button className="btn btn-ghost" onClick={() => navigate('/login')}>Sign in</button>
-        </div>
-      </section>
-
       <footer className="landing-footer">
         <div>
           <button className="landing-brand" onClick={() => goToSection('#top')}>
@@ -403,7 +394,7 @@ function FeatureVisual({ type }: { type: string }) {
     return <div className="landing-vis landing-vis-pressure"><i /><i /><i /><i /><i /><i /><i /></div>
   }
   if (type === 'countdown') {
-    return <div className="landing-vis landing-vis-count"><strong>06</strong><span>days · MATH 240</span></div>
+    return <div className="landing-vis landing-vis-count"><strong>06</strong><span>days · course exam</span></div>
   }
   if (type === 'courses') {
     return <div className="landing-vis landing-vis-courses"><i /><i /><i /></div>

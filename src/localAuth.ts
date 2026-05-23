@@ -54,7 +54,14 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 // Auth state.
 
 function readCurrentUser() {
-  return readJson<LocalUser | null>(currentUserKey, null)
+  const user = readJson<LocalUser | null>(currentUserKey, null)
+  if (user?.uid === 'local:demo') {
+    const blankUser = { uid: 'local:blank', email: 'blank@studenthub.local' }
+    resetBlankPlanner(blankUser.uid)
+    writeJson(currentUserKey, blankUser)
+    return blankUser
+  }
+  return user
 }
 
 function notifyAuthListeners() {
@@ -111,16 +118,16 @@ export async function signOut(_auth: typeof auth) {
   notifyAuthListeners()
 }
 
-export async function signInAsDemoUser(_auth: typeof auth) {
+export async function signInAsBlankUser(_auth: typeof auth) {
   void _auth
-  auth.currentUser = { uid: 'local:demo', email: 'demo@studenthub.local' }
-  resetDemoPlanner(auth.currentUser.uid)
+  auth.currentUser = { uid: 'local:blank', email: 'blank@studenthub.local' }
+  resetBlankPlanner(auth.currentUser.uid)
   writeJson(currentUserKey, auth.currentUser)
   notifyAuthListeners()
   return { user: auth.currentUser }
 }
 
-function resetDemoPlanner(uid: string) {
+function resetBlankPlanner(uid: string) {
   writeJson(`studenthub.${uid}.classes`, { classes: [] })
   writeJson(`studenthub.${uid}.calendar`, { events: [] })
   writeJson(`studenthub.${uid}.syllabi`, { uploads: [] })

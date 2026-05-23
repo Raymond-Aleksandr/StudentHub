@@ -1,31 +1,35 @@
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, Clock, FileUp, MapPin, Pencil, Plus } from 'lucide-react'
+import { CalendarDays, Clock, FileUp, Pencil, Plus } from 'lucide-react'
 import { usePlanner } from '../data/usePlanner'
-import { getDaysUntil } from '../domain/deadlines'
+import { formatDeadlineType, getDaysUntil } from '../domain/deadlines'
 import { EventEditModal } from '../components/EventCard'
 import type { CalendarEvent, DraftEvent } from '../domain/types'
-
-const tagVars = ['var(--tag-ochre)', 'var(--tag-plum)', 'var(--tag-slate)', 'var(--tag-sage)', 'var(--tag-teal)']
-
-function getTag(courseCode: string) {
-  let hash = 0
-  for (const char of courseCode.replace(/\s+/g, '')) hash += char.charCodeAt(0)
-  return tagVars[hash % tagVars.length]
-}
+import { tagForEventCourse } from '../domain/courseMeta'
 
 function dateTime(date: string, time: string) {
   return `${new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}${time ? ` · ${time}` : ''}`
 }
 
+function examLabel(event: Pick<CalendarEvent, 'deadlineType'>) {
+  return formatDeadlineType(event.deadlineType)
+}
+
+function examCardTitle(event: Pick<CalendarEvent, 'title' | 'deadlineType'>) {
+  const label = examLabel(event)
+  const title = event.title.trim()
+  return title && title.toLowerCase() !== label.toLowerCase() ? title : label
+}
+
 export default function ExamsPage() {
   const navigate = useNavigate()
-  const { examEvents, addDraftEvent, updateEvent, removeEvent } = usePlanner()
+  const { classes, examEvents, addDraftEvent, updateEvent, removeEvent } = usePlanner()
   const [editing, setEditing] = useState<CalendarEvent | 'new' | null>(null)
   const sorted = [...examEvents].filter((event) => !event.completed).sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date))
   const next = sorted[0]
   const daysOut = next ? getDaysUntil(next.date) : 0
+  const nextTitle = next ? examCardTitle(next) : ''
   const buckets = {
     'This week': sorted.filter((event) => getDaysUntil(event.date) <= 7),
     'In two weeks': sorted.filter((event) => getDaysUntil(event.date) > 7 && getDaysUntil(event.date) <= 14),
@@ -35,19 +39,20 @@ export default function ExamsPage() {
   return (
     <>
       {next ? (
-        <section className="hero-exam card" style={{ '--tag': getTag(next.courseCode) } as CSSProperties}>
-          <button className="hero-exam-edit" onClick={() => setEditing(next)} aria-label={`Edit ${next.title}`}>
+        <section className="hero-exam card" style={{ '--tag': tagForEventCourse(classes, next.courseCode) } as CSSProperties}>
+          <button className="hero-exam-edit" onClick={() => setEditing(next)} aria-label={`Edit ${nextTitle}`}>
             <Pencil size={16} />
           </button>
           <div className="hero-exam-left">
-            <span className="tag-pill" style={{ '--tag': getTag(next.courseCode) } as CSSProperties}>{next.courseCode || 'EXAM'}</span>
-            <div className="hero-exam-title serif">{next.title}</div>
-            <div className="hero-exam-meta">
-              <span><MapPin size={13} /> Location not set</span>
-              <span><Clock size={13} /> {dateTime(next.date, next.time)}</span>
-              <span className="mono">High weight</span>
+            <div className="hero-exam-kicker">
+              <span className="exam-code">{next.courseCode || 'Unassigned'}</span>
             </div>
-            <div className="hero-exam-format">{next.deadlineType === 'quiz' ? 'Short assessment' : 'Focused review recommended'}</div>
+            <div className="hero-exam-title serif">{nextTitle}</div>
+            <div className="hero-exam-meta">
+              <span><Clock size={13} /> {dateTime(next.date, next.time)}</span>
+              <span className="mono">{next.weight ? `${next.weight}% term` : daysOut <= 7 ? 'This week' : 'Scheduled'}</span>
+              {next.format && <span className="mono">{next.format}</span>}
+            </div>
           </div>
           <div className="hero-exam-right">
             <span className="eyebrow">Time remaining</span>
@@ -82,7 +87,7 @@ export default function ExamsPage() {
               const above = index % 2 === 0
               const far = index % 4 > 1
               return (
-                <div key={`${event.title}-${event.date}`} className={`et-mark ${above ? 'et-above' : 'et-below'} ${far ? 'et-far' : ''}`} style={{ left: `${pos}%`, '--tag': getTag(event.courseCode) } as CSSProperties}>
+                <div key={`${event.title}-${event.date}`} className={`et-mark ${above ? 'et-above' : 'et-below'} ${far ? 'et-far' : ''}`} style={{ left: `${pos}%`, '--tag': tagForEventCourse(classes, event.courseCode) } as CSSProperties}>
                   <span className="et-stem" />
                   <span className="et-dot" />
                   <div className="et-label">
@@ -133,24 +138,17 @@ export default function ExamsPage() {
           <div className="exam-grid">
             {items.map((event) => {
               const days = getDaysUntil(event.date)
+              const titleText = examCardTitle(event)
               return (
-                <article key={`${event.title}-${event.date}`} className="exam-card card" style={{ '--tag': getTag(event.courseCode) } as CSSProperties}>
+                <button key={`${event.title}-${event.date}`} className="exam-card card" style={{ '--tag': tagForEventCourse(classes, event.courseCode) } as CSSProperties} onClick={() => setEditing(event)}>
                   <div className="ec-top">
-                    <span className="tag-pill" style={{ '--tag': getTag(event.courseCode) } as CSSProperties}>{event.courseCode || 'EXAM'}</span>
-                    <button className="exam-edit-btn" onClick={() => setEditing(event)} aria-label={`Edit ${event.title}`}>
-                      <Pencil size={14} />
-                    </button>
+                    <span className="tag-pill" style={{ '--tag': tagForEventCourse(classes, event.courseCode) } as CSSProperties}>{event.courseCode || 'EXAM'}</span>
                     <span className={`mono ec-days ${days <= 7 ? 'soon' : ''}`}>{days}d</span>
                   </div>
-                  <button className="exam-card-title" onClick={() => setEditing(event)}>
-                    <h3 className="serif">{event.title}</h3>
-                  </button>
+                  <h3 className="serif">{titleText}</h3>
                   <div className="ec-date mono">{dateTime(event.date, event.time)}</div>
-                  <div className="ec-foot">
-                    <span><MapPin size={12} /> Location not set</span>
-                    <span className="mono">{event.deadlineType}</span>
-                  </div>
-                </article>
+                  {event.weight !== null && event.weight !== undefined && <div className="ec-weight mono">{event.weight}% term</div>}
+                </button>
               )
             })}
           </div>
@@ -182,6 +180,10 @@ function newExamDraft(): DraftEvent {
     courseCode: '',
     date: date.toISOString().slice(0, 10),
     time: '09:00',
+    weight: 10,
+    score: null,
+    location: '',
+    format: '',
     deadlineType: 'exam',
   }
 }

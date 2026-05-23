@@ -7,6 +7,10 @@ export interface CalendarEvent {
   courseCode: string
   date: string
   time: string
+  weight: number | null
+  score: number | null
+  location: string
+  format: string
   priority: 'high' | 'medium' | 'low'
   type: 'assignment' | 'exam'
   deadlineType: DeadlineType
@@ -28,6 +32,9 @@ export interface ClassInfo {
   profEmail: string
   taName: string
   taEmail: string
+  grade: number | null
+  progress: number | null
+  color: string
   sourceUploadId: string
 }
 
@@ -49,12 +56,19 @@ export interface SyllabusUpload {
     profEmail: string
     taName: string
     taEmail: string
+    grade: number | null
+    progress: number | null
+    color: string
   }
   parsedEvents?: Array<{
     title: string
     courseCode: string
     date: string
     time: string
+    weight: number | null
+    score: number | null
+    location: string
+    format: string
     type: 'assignment' | 'exam'
     deadlineType: DeadlineType
     priority: 'high' | 'medium' | 'low'
@@ -68,6 +82,10 @@ export interface DraftEvent {
   courseCode: string
   date: string
   time: string
+  weight: number | null
+  score: number | null
+  location: string
+  format: string
   deadlineType: DeadlineType
 }
 

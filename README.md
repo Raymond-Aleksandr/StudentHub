@@ -8,8 +8,10 @@ StudentHub is a mobile-first study planner for turning course syllabi into a usa
 - Extracts courses, deadlines, quizzes, tests, exams, and reminders.
 - Organizes the planner around Today, Import, Tasks, Exams, Courses, and Calendar views.
 - Stores planner data in the current browser with local profiles.
-- Offers a blank local profile for trying the app without sample data.
+- Offers a blank local profile for trying the app without starter data.
 - Lets users add and edit courses, tasks, exams, calendar items, and imported syllabus metadata.
+- Stores assessment weights and earned scores so course running grades can be computed when scores are entered.
+- Assigns editable course colors that are reused across course cards, task rows, exam rows, and calendar lists.
 - Provides theme tweaks for accent color, density, and dark mode.
 - Keeps cross-device sync optional. Firebase is not currently wired into the app.
 
@@ -33,6 +35,7 @@ The static frontend can run without secrets. PDF syllabus import only works when
 - Vite
 - React Router
 - Lucide React
+- Google Fonts for Newsreader, Geist, and Geist Mono
 - Cloudflare Workers
 - OpenRouter file parsing from the Worker
 
@@ -73,6 +76,8 @@ npm run lint
 npm run build
 npm audit --omit=dev
 ```
+
+There is no separate test script in `package.json` at the moment. TypeScript checking is part of `npm run build` through `tsc -b`.
 
 Available root scripts:
 
@@ -165,9 +170,13 @@ SPA direct-route refreshes are handled by `public/404.html` and the redirect rep
 - Local email/password profiles are browser-local only. They are not cloud accounts.
 - Passwords are hashed with Web Crypto before being stored locally, but this is still local browser auth, not production authentication.
 - The blank profile resets its planner data when opened.
+- The repository does not ship seeded courses, exams, tasks, private syllabi, or real student data.
+- Local testing data stays in the browser and should be cleared before screenshots, demos, or public issue reports if it came from a real syllabus.
 - Uploaded PDFs are sent to the configured Worker for parsing.
 - The Worker does not store uploaded PDFs.
 - Do not commit `.env.local`, `worker/.dev.vars`, API keys, service accounts, private syllabi, or test course files.
+
+To clear local planner data in a browser, use the app's blank profile or remove the `studenthub.*` keys from that browser's local storage.
 
 ## Firebase
 
@@ -197,7 +206,9 @@ src/
     usePlanner.ts            # Planner context hook/export
   domain/
     calendar.ts              # Calendar grid/date helpers
+    courseMeta.ts            # Course colors, combined-course matching, percent/weight normalization
     deadlines.ts             # Deadline types, countdowns, sorting
+    grades.ts                # Running grade and term-weight calculations
     merge.ts                 # Import normalization and merging
     types.ts                 # Domain types
   pages/

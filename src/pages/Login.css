@@ -189,7 +189,7 @@
   background: var(--line);
 }
 
-.signin-demo {
+.signin-blank {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -200,22 +200,22 @@
   background: var(--surface);
 }
 
-.signin-demo div {
+.signin-blank div {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.signin-demo b {
+.signin-blank b {
   font-weight: 600;
 }
 
-.signin-demo span {
+.signin-blank span {
   color: var(--ink-3);
   font-size: 12.5px;
 }
 
-.signin-demo .btn {
+.signin-blank .btn {
   height: 38px;
   padding: 0 16px;
   font-size: 13px;
@@ -356,7 +356,7 @@
     font-size: 48px;
   }
 
-  .signin-demo {
+  .signin-blank {
     align-items: stretch;
     flex-direction: column;
   }

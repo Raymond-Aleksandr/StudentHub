@@ -4,10 +4,16 @@ import { useNavigate } from 'react-router-dom'
 import { BookOpen, CalendarDays, Search } from 'lucide-react'
 import { usePlanner } from '../data/usePlanner'
 import { EventCard } from '../components/EventCard'
-import { formatCountdown, getDaysUntil } from '../domain/deadlines'
+import { formatDeadlineType, getDaysUntil } from '../domain/deadlines'
+import { courseMatchesEvent, tagForCourse, tagForEventCourse } from '../domain/courseMeta'
+import { getCourseGrade } from '../domain/grades'
 
 function todayLabel() {
   return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date())
+}
+
+function dateTime(date: string, time: string) {
+  return `${new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}${time ? ` · ${time}` : ''}`
 }
 
 function timeToDecimal(time: string, fallback: number) {
@@ -24,7 +30,7 @@ function fmtHour(value: number) {
 
 export default function TodayPage() {
   const navigate = useNavigate()
-  const { stats, upcomingEvents, reminders, todayClasses, taskEvents, examEvents, toggleComplete, removeEvent, updateEvent } = usePlanner()
+  const { stats, classes, upcomingEvents, reminders, todayClasses, taskEvents, examEvents, toggleComplete, removeEvent, updateEvent } = usePlanner()
   const now = new Date()
   const actualHour = now.getHours() + now.getMinutes() / 60
   const hour = actualHour >= 8 && actualHour <= 21 ? actualHour : 11 + 25 / 60
@@ -43,49 +49,58 @@ export default function TodayPage() {
       start: timeToDecimal(course.startTime, 13),
       end: timeToDecimal(course.endTime, timeToDecimal(course.startTime, 13) + 1),
       location: course.location,
-      tag: ['var(--tag-slate)', 'var(--tag-teal)', 'var(--tag-ochre)', 'var(--tag-plum)', 'var(--tag-sage)'][index % 5],
+      tag: tagForCourse(course, index),
       personal: false,
     })).sort((left, right) => left.start - right.start),
   [todayClasses])
 
   const current = scheduleBlocks.find((block) => hour >= block.start && hour < block.end)
   const nextBlock = scheduleBlocks.find((block) => block.start > hour)
-  const hasNowContext = Boolean(current || nextBlock || upcomingEvents[0])
+  const focusEvent = upcomingEvents[0]
+  const focusDays = focusEvent ? getDaysUntil(focusEvent.date) : 0
+  const hasFocusContext = Boolean(focusEvent || current || nextBlock)
 
   const week = Array.from({ length: 7 }, (_, offset) => {
     const date = new Date()
     date.setDate(date.getDate() + offset)
     const tasks = openTasks.filter((event) => getDaysUntil(event.date) === offset)
     const exams = examEvents.filter((event) => !event.completed && getDaysUntil(event.date) === offset)
-    const load = tasks.length * 3 + exams.length * 8
+    const load = [...tasks, ...exams].reduce((sum, event) => sum + (event.weight ?? (event.type === 'exam' ? 10 : 3)), 0)
     return { date, tasks, exams, load }
   })
   const maxLoad = Math.max(...week.map((day) => day.load), 1)
+  const courseGrades = classes
+    .map((course) => getCourseGrade(course, [...taskEvents, ...examEvents].filter((event) => courseMatchesEvent(course, event))))
+    .filter((grade) => grade.value !== null)
+  const averageGrade = courseGrades.length
+    ? Math.round(courseGrades.reduce((sum, grade) => sum + (grade.value ?? 0), 0) / courseGrades.length)
+    : null
+  const hasComputedGrade = courseGrades.some((grade) => grade.source === 'computed')
 
   return (
     <>
-      {hasNowContext && (
+      {hasFocusContext && (
         <div className="now-strip">
-          {(current || nextBlock) && (
-            <section className="now-card">
-              <div className="now-top">
-                <span className="now-pulse" />
-                <span className="eyebrow">{current ? `Now · ${fmtHour(hour)}` : 'Next class'}</span>
+          <section className="now-card" style={{ '--tag': tagForEventCourse(classes, focusEvent?.courseCode ?? '') } as CSSProperties}>
+            <div className="hero-exam-left">
+              <div className="hero-exam-kicker">
+                <span className="exam-code">{focusEvent?.courseCode || (current || nextBlock)?.title.split(' · ')[0] || 'Planner'}</span>
               </div>
-              <div className="now-title">{current ? current.title : nextBlock?.title}</div>
-              <div className="now-meta">
-                {current ? `${current.location || 'Campus'} · ends ${fmtHour(current.end)}` : nextBlock ? `${fmtHour(nextBlock.start)} · ${nextBlock.location || todayLabel()}` : todayLabel()}
+              <div className="hero-exam-title serif">{focusEvent?.title || current?.title || nextBlock?.title}</div>
+              <div className="hero-exam-meta">
+                <span>{focusEvent ? dateTime(focusEvent.date, focusEvent.time) : current ? `${fmtHour(hour)} · ends ${fmtHour(current.end)}` : nextBlock ? `${fmtHour(nextBlock.start)} · ${nextBlock.location || todayLabel()}` : todayLabel()}</span>
+                <span className="mono">{focusEvent ? `${formatDeadlineType(focusEvent.deadlineType)}${focusEvent.weight ? ` · ${focusEvent.weight}%` : ''}` : current?.location || nextBlock?.location || 'Today'}</span>
               </div>
-            </section>
-          )}
-
-          {upcomingEvents[0] && (
-            <section className="next-card">
-              <span className="eyebrow">Up next</span>
-              <div className="next-title">{upcomingEvents[0].title}</div>
-              <div className="next-time mono">{`${upcomingEvents[0].courseCode || 'Unassigned'} · ${formatCountdown(upcomingEvents[0].date)}`}</div>
-            </section>
-          )}
+            </div>
+            <div className="hero-exam-right">
+              <span className="eyebrow">{focusEvent ? 'Due in' : 'Planner'}</span>
+              <div className="countdown serif">
+                {focusEvent ? Math.max(focusDays, 0) : fmtHour(hour)}
+                {focusEvent && <small>{focusDays === 1 ? 'day' : 'days'}</small>}
+              </div>
+              <div className="countdown-bar"><div style={{ width: `${focusEvent ? Math.max(8, 100 - Math.max(focusDays, 0) * 5) : 28}%` }} /></div>
+            </div>
+          </section>
         </div>
       )}
 
@@ -102,8 +117,8 @@ export default function TodayPage() {
         </button>
         <button className="stat" onClick={() => navigate('/course-info')}>
           <span className="eyebrow">Courses</span>
-          <span className="stat-n serif">{stats.courses}</span>
-          <span className="stat-sub">Imported and editable</span>
+          <span className="stat-n serif">{averageGrade ?? stats.courses}{averageGrade !== null && <small>%</small>}</span>
+          <span className="stat-sub">{averageGrade !== null ? `${stats.courses} courses · ${hasComputedGrade ? 'running avg' : 'estimate avg'}` : 'Imported and editable'}</span>
         </button>
       </section>
 

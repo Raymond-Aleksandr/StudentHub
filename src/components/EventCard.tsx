@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react'
 import { Check, Pencil, Trash2, X } from 'lucide-react'
 import type { CalendarEvent, DraftEvent } from '../domain/types'
 import { formatCountdown, formatDeadlineType, getEventDeadlineType } from '../domain/deadlines'
+import { normalizeWeight, tagForEventCourse } from '../domain/courseMeta'
+import { usePlanner } from '../data/usePlanner'
 
 interface EventCardProps {
   event: CalendarEvent
@@ -20,37 +22,25 @@ interface EventEditModalProps {
   onDelete?: () => void
 }
 
-const courseTags = [
-  'var(--tag-ochre)',
-  'var(--tag-plum)',
-  'var(--tag-slate)',
-  'var(--tag-sage)',
-  'var(--tag-teal)',
-]
-
-function getCourseTag(courseCode: string) {
-  const normalized = courseCode.replace(/\s+/g, '').toUpperCase()
-  let hash = 0
-  for (const char of normalized) hash += char.charCodeAt(0)
-  return courseTags[hash % courseTags.length]
-}
-
 export function EventCard({ event, onToggle, onRemove, onUpdate }: EventCardProps) {
+  const { classes } = usePlanner()
   const [editing, setEditing] = useState(false)
   const deadlineType = getEventDeadlineType(event)
   const isDone = Boolean(event.completed)
-  const isHeavy = event.priority === 'high'
+  const isHeavy = event.priority === 'high' || (event.weight ?? 0) >= 8
   const hasTime = Boolean(event.time)
+  const tag = tagForEventCourse(classes, event.courseCode)
 
   return (
     <>
-      <article className={`task-row ${isDone ? 'done' : ''}`} style={{ '--tag': getCourseTag(event.courseCode) } as CSSProperties}>
+      <article className={`task-row ${isDone ? 'done' : ''}`} style={{ '--tag': tag } as CSSProperties}>
         <button className="task-check" onClick={() => onToggle(event)} aria-label={isDone ? 'Mark incomplete' : 'Mark complete'} />
         <button className="task-body task-body-button" onClick={() => setEditing(true)} aria-label={`Edit ${event.title}`}>
           <div className="task-meta-row">
-            <span className={`tag ${isHeavy ? 'heavy' : ''}`} style={{ '--tag': getCourseTag(event.courseCode) } as CSSProperties}>{event.courseCode || 'Unassigned'}</span>
+            <span className={`tag ${isHeavy ? 'heavy' : ''}`} style={{ '--tag': tag } as CSSProperties}>{event.courseCode || 'Unassigned'}</span>
             <span className="sep">·</span>
             <span className="type">{formatDeadlineType(deadlineType)}</span>
+            {event.weight !== null && event.weight !== undefined && <span className="task-weight-pill mono">{event.weight}% term</span>}
           </div>
           <div className="name">{event.title}</div>
         </button>
@@ -78,13 +68,19 @@ export function EventCard({ event, onToggle, onRemove, onUpdate }: EventCardProp
 }
 
 export function EventEditModal({ event, initialDraft, title = 'Edit item', onClose, onSave, onDelete }: EventEditModalProps) {
+  const { classes } = usePlanner()
   const [draft, setDraft] = useState<DraftEvent>(() => initialDraft ?? {
     title: event?.title ?? '',
     courseCode: event?.courseCode ?? '',
     date: event?.date ?? new Date().toISOString().slice(0, 10),
     time: event?.time ?? '23:59',
+    weight: event?.weight ?? (event?.type === 'exam' ? 10 : 3),
+    score: event?.score ?? null,
+    location: event?.location ?? '',
+    format: event?.format ?? '',
     deadlineType: event ? getEventDeadlineType(event) : 'assignment',
   })
+  const isExam = draft.deadlineType === 'exam' || draft.deadlineType === 'test' || draft.deadlineType === 'quiz'
 
   useEffect(() => {
     const onKey = (keyboardEvent: KeyboardEvent) => {
@@ -108,7 +104,7 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
       <div className="modal event-modal" role="dialog" aria-label={title}>
         <div className="modal-head">
           <div>
-            <span className="eyebrow" style={{ color: getCourseTag(draft.courseCode) }}>{draft.courseCode || 'Unassigned'} · {formatDeadlineType(draft.deadlineType)}</span>
+            <span className="eyebrow" style={{ color: tagForEventCourse(classes, draft.courseCode) }}>{draft.courseCode || 'Unassigned'} · {formatDeadlineType(draft.deadlineType)}</span>
           </div>
           <button className="tp-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
         </div>
@@ -138,6 +134,46 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
               <select className="modal-input" value={draft.deadlineType} onChange={(inputEvent) => setDraft({ ...draft, deadlineType: inputEvent.target.value as DraftEvent['deadlineType'] })}>
                 {['assignment', 'quiz', 'test', 'exam', 'presentation', 'project', 'lab-report', 'other'].map((type) => <option key={type} value={type}>{formatDeadlineType(type as DraftEvent['deadlineType'])}</option>)}
               </select>
+            </div>
+            {isExam && (
+              <>
+                <div className="modal-input-wrap">
+                  <span className="modal-input-tag mono">Format</span>
+                  <input className="modal-input" value={draft.format} onChange={(inputEvent) => setDraft({ ...draft, format: inputEvent.target.value })} placeholder="e.g. Closed-book, 90 min" />
+                </div>
+                <div className="modal-input-wrap">
+                  <span className="modal-input-tag mono">Where</span>
+                  <input className="modal-input" value={draft.location} onChange={(inputEvent) => setDraft({ ...draft, location: inputEvent.target.value })} placeholder="Room or location" />
+                </div>
+              </>
+            )}
+          </section>
+          <section className="modal-section">
+            <label className="modal-section-label">Grading</label>
+            <div className="modal-slider-row">
+              <span className="modal-slider-label">Weight</span>
+              <input
+                className="modal-slider"
+                type="range"
+                min={0}
+                max={isExam ? 60 : 30}
+                step={isExam ? 1 : 0.5}
+                value={draft.weight ?? 0}
+                onChange={(inputEvent) => setDraft({ ...draft, weight: normalizeWeight(inputEvent.target.value) })}
+              />
+              <span className="modal-slider-val">{draft.weight ?? 0}{isExam ? '%' : '%'}</span>
+            </div>
+            <div className="modal-input-wrap">
+              <span className="modal-input-tag mono">Score</span>
+              <input
+                className="modal-input"
+                type="number"
+                min="0"
+                max="100"
+                value={draft.score ?? ''}
+                onChange={(inputEvent) => setDraft({ ...draft, score: inputEvent.target.value === '' ? null : Number(inputEvent.target.value) })}
+                placeholder="Earned score (%)"
+              />
             </div>
           </section>
         </div>

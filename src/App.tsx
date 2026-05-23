@@ -87,6 +87,10 @@ function getPlannerCopy(pathname: string) {
   return plannerViewCopy[key ?? 'dashboard'] ?? plannerViewCopy.dashboard
 }
 
+function formatTodayAccent() {
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date())
+}
+
 function PlannerShell({
   children,
   tweaks,
@@ -105,6 +109,7 @@ function PlannerShell({
   const location = useLocation()
   const navigate = useNavigate()
   const copy = getPlannerCopy(location.pathname)
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/'
 
   const handleLogout = async () => {
     await signOut(auth)
@@ -140,7 +145,10 @@ function PlannerShell({
         <header className="topbar">
           <div>
             <span className="eyebrow">{copy.eyebrow}</span>
-            <h1>{copy.title}</h1>
+            <h1>
+              {copy.title}
+              {isDashboard && <span className="topbar-title-accent">, {formatTodayAccent()}</span>}
+            </h1>
           </div>
           <button className="topbar-tweaks" onClick={onToggleTweaks} aria-label="Open theme tweaks" aria-expanded={tweaksOpen}>
             <Palette size={18} />

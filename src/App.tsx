@@ -75,9 +75,13 @@ function readStoredTweaks(): ThemeTweaks {
 
 function applyTweaks(tweaks: ThemeTweaks) {
   const option = accentOptions.find((accent) => accent.hue === tweaks.accentHue) ?? accentOptions[0]
-  document.documentElement.style.setProperty('--accent', `oklch(${option.l} ${option.c} ${option.hue})`)
-  document.documentElement.style.setProperty('--accent-2', `oklch(${option.l - 0.07} ${option.c + 0.01} ${option.hue})`)
-  document.documentElement.style.setProperty('--accent-soft', `oklch(0.93 ${option.c * 0.25} ${option.hue})`)
+  const accentL = tweaks.dark ? Math.min(option.l + 0.03, 0.68) : option.l
+  const accentC = tweaks.dark ? option.c * 0.68 : option.c
+  document.documentElement.style.setProperty('--accent', `oklch(${accentL} ${accentC} ${option.hue})`)
+  document.documentElement.style.setProperty('--accent-2', `oklch(${accentL - 0.07} ${accentC + (tweaks.dark ? 0.005 : 0.01)} ${option.hue})`)
+  document.documentElement.style.setProperty('--accent-soft', tweaks.dark
+    ? `oklch(0.28 ${accentC * 0.45} ${option.hue})`
+    : `oklch(0.93 ${option.c * 0.25} ${option.hue})`)
   document.documentElement.dataset.theme = tweaks.dark ? 'dark' : 'light'
   document.documentElement.dataset.density = tweaks.density
 }

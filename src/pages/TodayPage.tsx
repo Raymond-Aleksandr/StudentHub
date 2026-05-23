@@ -70,7 +70,7 @@ export default function TodayPage() {
   const upcomingTasks = openTasks.filter((event) => getDaysUntil(event.date) >= 0)
   const todayTasks = openTasks.filter((event) => getDaysUntil(event.date) === 0)
   const tomorrowTasks = openTasks.filter((event) => getDaysUntil(event.date) === 1)
-  const nextExam = examEvents.find((event) => !event.completed)
+  const nextExam = examEvents.find((event) => !event.completed && event.date && getDaysUntil(event.date) >= 0)
 
   const scheduleBlocks = useMemo(() => {
     const classBlocks = todayClasses.map((course, index) => {

@@ -24,10 +24,6 @@ function writeJson(key: string, value: unknown) {
   subscribers.get(key)?.forEach((listener) => listener())
 }
 
-function isBlankProfile(uid: string) {
-  return uid === 'local:blank'
-}
-
 function subscribeToKey(key: string, listener: () => void): Unsubscribe {
   const keySubscribers = subscribers.get(key) ?? new Set<() => void>()
   keySubscribers.add(listener)
@@ -144,10 +140,6 @@ export function subscribeToCalendarEvents(
     const events = Array.isArray(data.events)
       ? data.events.map((event: Partial<CalendarEvent>) => normalizeCalendarEvent(event))
       : []
-    if (isBlankProfile(uid) && events.length) {
-      writeJson(key, { events: [] })
-      return
-    }
     onChange(events)
   })
 }
@@ -166,10 +158,6 @@ export function subscribeToClasses(
     const classes = Array.isArray(data.classes)
       ? data.classes.map((course: Partial<ClassInfo>, index: number) => normalizeClass(course, index))
       : []
-    if (isBlankProfile(uid) && classes.length) {
-      writeJson(key, { classes: [] })
-      return
-    }
     onChange(classes)
   })
 }
@@ -188,10 +176,6 @@ export function subscribeToSyllabusUploads(
     const uploads = Array.isArray(data.uploads)
       ? data.uploads.map((upload: Partial<SyllabusUpload>) => normalizeUpload(upload))
       : []
-    if (isBlankProfile(uid) && uploads.length) {
-      writeJson(key, { uploads: [] })
-      return
-    }
     onChange(uploads)
   })
 }

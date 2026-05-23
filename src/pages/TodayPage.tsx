@@ -44,7 +44,8 @@ export default function TodayPage() {
   const endH = 21
 
   const openTasks = taskEvents.filter((event) => !event.completed)
-  const todayTasks = openTasks.filter((event) => getDaysUntil(event.date) <= 0)
+  const upcomingTasks = openTasks.filter((event) => getDaysUntil(event.date) >= 0)
+  const todayTasks = openTasks.filter((event) => getDaysUntil(event.date) === 0)
   const tomorrowTasks = openTasks.filter((event) => getDaysUntil(event.date) === 1)
   const nextExam = examEvents.find((event) => !event.completed)
 
@@ -209,9 +210,9 @@ export default function TodayPage() {
         </div>
         <button className="more" onClick={() => navigate('/tasks')}>All tasks →</button>
       </div>
-      {openTasks.slice(0, 4).length ? openTasks.slice(0, 4).map((event) => (
+      {upcomingTasks.slice(0, 4).length ? upcomingTasks.slice(0, 4).map((event) => (
         <EventCard key={`${event.title}-${event.date}-${event.time}-${event.sourceUploadId}`} event={event} onToggle={toggleComplete} onRemove={removeEvent} onUpdate={updateEvent} />
-      )) : <div className="empty"><BookOpen size={28} /><h3>No open tasks</h3><p>Import a syllabus or add one from Tasks.</p></div>}
+      )) : <div className="empty"><BookOpen size={28} /><h3>No upcoming tasks</h3><p>Overdue items stay in Reminders and the Tasks view.</p></div>}
 
       <div className="sec-head">
         <div>

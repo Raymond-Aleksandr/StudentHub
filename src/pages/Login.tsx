@@ -66,9 +66,9 @@ function Login() {
           <span>SH</span>
           StudentHub
         </button>
-        <button className="signin-back" onClick={() => navigate('/')}>
+        <button className="signin-back" onClick={() => navigate('/dashboard')}>
           <ArrowLeft size={14} />
-          Home
+          Planner
         </button>
       </header>
 
@@ -180,7 +180,7 @@ function Login() {
           <div>
             <span className="eyebrow">Why an account at all?</span>
             <p className="signin-quote">
-              "Sync your courses to whatever device is in your hand at 2am the night before."
+              "Keep different local plans separate without sending your planner to a server."
             </p>
           </div>
           <div className="signin-aside-foot">
@@ -188,7 +188,7 @@ function Login() {
               <div className="signin-avatar">SH</div>
               <div>
                 <div className="signin-who-title">Optional, always</div>
-                <div className="signin-terms">Bring-your-own Firebase · zero lock-in</div>
+                <div className="signin-terms">Local profile · no cloud account</div>
               </div>
             </div>
             <div className="signin-mini" aria-hidden="true">

@@ -1,9 +1,10 @@
 import { deadlineTypeToEventType, normalizeDeadlineType } from '../domain/deadlines'
 import { inferDurationMinutes, normalizeCourseColor, normalizeDurationMinutes, normalizePercent, normalizeWeight } from '../domain/courseMeta'
 import { dedupeCalendarEvents } from '../domain/merge'
+import { defaultReminderDaysBefore } from '../domain/notifications'
 import type { CalendarEvent, ClassInfo, SyllabusUpload } from '../domain/types'
 
-export type Unsubscribe = () => void
+type Unsubscribe = () => void
 
 const subscribers = new Map<string, Set<() => void>>()
 
@@ -62,9 +63,10 @@ function normalizeCalendarEvent(event: Partial<CalendarEvent>): CalendarEvent {
     deadlineType,
     sourceUploadId: event.sourceUploadId ?? '',
     completed: Boolean(event.completed),
+    reminderEnabled: event.reminderEnabled !== false,
     reminderDaysBefore: typeof event.reminderDaysBefore === 'number'
       ? event.reminderDaysBefore
-      : event.type === 'exam' ? 7 : 2,
+      : defaultReminderDaysBefore(type),
   }
 }
 
@@ -131,6 +133,10 @@ function normalizeUpload(upload: Partial<SyllabusUpload>): SyllabusUpload {
             type,
             deadlineType,
             priority: event.priority === 'medium' || event.priority === 'low' ? event.priority : 'high',
+            reminderEnabled: event.reminderEnabled !== false,
+            reminderDaysBefore: typeof event.reminderDaysBefore === 'number'
+              ? event.reminderDaysBefore
+              : defaultReminderDaysBefore(type),
           }
         })
       : [],
@@ -192,8 +198,3 @@ export function subscribeToSyllabusUploads(
 export async function saveSyllabusUploads(uid: string, uploads: SyllabusUpload[]) {
   writeJson(getStorageKey(uid, 'syllabi'), { uploads: uploads.map(normalizeUpload) })
 }
-
-// Legacy type aliases for backward compatibility.
-export type StoredCalendarEvent = CalendarEvent
-export type StoredClassInfo = ClassInfo
-export type StoredSyllabusUpload = SyllabusUpload

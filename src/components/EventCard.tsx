@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, Pencil, Trash2, X } from 'lucide-react'
+import { Bell, BellOff, Check, Pencil, Trash2, X } from 'lucide-react'
 import type { CalendarEvent, DraftEvent } from '../domain/types'
 import { formatCountdown, formatDeadlineType, getEventDeadlineType } from '../domain/deadlines'
 import { normalizeDurationMinutes, normalizeWeight, tagForEventCourse } from '../domain/courseMeta'
+import { defaultReminderDaysBefore } from '../domain/notifications'
 import { usePlanner } from '../data/usePlanner'
 import { useModalBodyLock } from './useModalBodyLock'
+import { isNativeRuntime } from '../native/runtime'
 
 interface EventCardProps {
   event: CalendarEvent
@@ -71,6 +73,7 @@ export function EventCard({ event, onToggle, onRemove, onUpdate }: EventCardProp
 
 export function EventEditModal({ event, initialDraft, title = 'Edit item', onClose, onSave, onDelete }: EventEditModalProps) {
   const { classes } = usePlanner()
+  const nativeRuntime = isNativeRuntime()
   const [draft, setDraft] = useState<DraftEvent>(() => initialDraft ?? {
     title: event?.title ?? '',
     courseCode: event?.courseCode ?? '',
@@ -82,9 +85,23 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
     location: event?.location ?? '',
     format: event?.format ?? '',
     deadlineType: event ? getEventDeadlineType(event) : 'assignment',
+    reminderEnabled: event?.reminderEnabled ?? true,
+    reminderDaysBefore: event?.reminderDaysBefore ?? defaultReminderDaysBefore(event?.type ?? 'assignment'),
   })
   const isExam = draft.deadlineType === 'exam' || draft.deadlineType === 'test' || draft.deadlineType === 'quiz'
   useModalBodyLock()
+
+  const setDeadlineType = (deadlineType: DraftEvent['deadlineType']) => {
+    const nextIsExam = deadlineType === 'exam' || deadlineType === 'test' || deadlineType === 'quiz'
+    const previousDefault = defaultReminderDaysBefore(isExam ? 'exam' : 'assignment')
+    setDraft({
+      ...draft,
+      deadlineType,
+      reminderDaysBefore: draft.reminderDaysBefore === previousDefault
+        ? defaultReminderDaysBefore(nextIsExam ? 'exam' : 'assignment')
+        : draft.reminderDaysBefore,
+    })
+  }
 
   useEffect(() => {
     const onKey = (keyboardEvent: KeyboardEvent) => {
@@ -111,17 +128,29 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
           <button className="tp-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
         </div>
         <div className="modal-body">
-          <input className="modal-title-input" value={draft.title} onChange={(inputEvent) => setDraft({ ...draft, title: inputEvent.target.value })} placeholder="What needs doing?" autoFocus />
+          <input className="modal-title-input" value={draft.title} onChange={(inputEvent) => setDraft({ ...draft, title: inputEvent.target.value })} placeholder="What needs doing?" />
           <section className="modal-section">
             <label className="modal-section-label">When</label>
             <div className={`modal-row ${isExam ? 'three' : ''}`}>
               <div className="modal-input-wrap">
                 <span className="modal-input-tag mono">Date</span>
-                <input className="modal-input center" type="date" value={draft.date} onChange={(inputEvent) => setDraft({ ...draft, date: inputEvent.target.value })} />
+                <StableDateTimeInput
+                  className="modal-input center native-safe-input"
+                  kind="date"
+                  nativeRuntime={nativeRuntime}
+                  value={draft.date}
+                  onChange={(value) => setDraft({ ...draft, date: value })}
+                />
               </div>
               <div className="modal-input-wrap">
                 <span className="modal-input-tag mono">{isExam ? 'Start' : 'Due'}</span>
-                <input className="modal-input center" type="time" value={draft.time} onChange={(inputEvent) => setDraft({ ...draft, time: inputEvent.target.value })} />
+                <StableDateTimeInput
+                  className="modal-input center native-safe-input"
+                  kind="time"
+                  nativeRuntime={nativeRuntime}
+                  value={draft.time}
+                  onChange={(value) => setDraft({ ...draft, time: value })}
+                />
               </div>
               {isExam && (
                 <div className="modal-input-wrap">
@@ -148,7 +177,7 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
             </div>
             <div className="modal-input-wrap">
               <span className="modal-input-tag mono">Type</span>
-              <select className="modal-input" value={draft.deadlineType} onChange={(inputEvent) => setDraft({ ...draft, deadlineType: inputEvent.target.value as DraftEvent['deadlineType'] })}>
+              <select className="modal-input" value={draft.deadlineType} onChange={(inputEvent) => setDeadlineType(inputEvent.target.value as DraftEvent['deadlineType'])}>
                 {['assignment', 'quiz', 'test', 'exam', 'presentation', 'project', 'lab-report', 'other'].map((type) => <option key={type} value={type}>{formatDeadlineType(type as DraftEvent['deadlineType'])}</option>)}
               </select>
             </div>
@@ -163,6 +192,35 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
                   <input className="modal-input" value={draft.location} onChange={(inputEvent) => setDraft({ ...draft, location: inputEvent.target.value })} placeholder="Room or location" />
                 </div>
               </>
+            )}
+          </section>
+          <section className="modal-section">
+            <label className="modal-section-label">Reminder</label>
+            <button
+              className={`reminder-toggle ${draft.reminderEnabled ? 'on' : ''}`}
+              type="button"
+              onClick={() => setDraft({ ...draft, reminderEnabled: !draft.reminderEnabled })}
+              aria-pressed={draft.reminderEnabled}
+            >
+              <span className="reminder-toggle-icon">{draft.reminderEnabled ? <Bell size={16} /> : <BellOff size={16} />}</span>
+              <span>
+                <b>{draft.reminderEnabled ? 'Notification on' : 'Notification off'}</b>
+                <small>{draft.reminderEnabled ? 'Local reminder will be scheduled if permission is granted.' : 'This item will not trigger a local notification.'}</small>
+              </span>
+            </button>
+            {draft.reminderEnabled && (
+              <div className="modal-input-wrap">
+                <span className="modal-input-tag mono">Days before</span>
+                <input
+                  className="modal-input center"
+                  type="number"
+                  min="0"
+                  max="30"
+                  step="1"
+                  value={draft.reminderDaysBefore}
+                  onChange={(inputEvent) => setDraft({ ...draft, reminderDaysBefore: Math.max(0, Math.min(30, Number(inputEvent.target.value) || 0)) })}
+                />
+              </div>
             )}
           </section>
           <section className="modal-section">
@@ -204,4 +262,42 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
   )
 
   return createPortal(modal, document.body)
+}
+
+function StableDateTimeInput({
+  className,
+  kind,
+  nativeRuntime,
+  value,
+  onChange,
+}: {
+  className: string
+  kind: 'date' | 'time'
+  nativeRuntime: boolean
+  value: string
+  onChange: (value: string) => void
+}) {
+  if (!nativeRuntime) {
+    return (
+      <input
+        className={className}
+        type={kind}
+        value={value}
+        onChange={(inputEvent) => onChange(inputEvent.target.value)}
+      />
+    )
+  }
+
+  return (
+    <div className={`${className} native-picker-shell`}>
+      <span className="native-picker-value">{value || (kind === 'date' ? 'YYYY-MM-DD' : 'HH:MM')}</span>
+      <input
+        className="native-picker-control"
+        type={kind}
+        value={value}
+        onChange={(inputEvent) => onChange(inputEvent.target.value)}
+        aria-label={kind === 'date' ? 'Date' : 'Time'}
+      />
+    </div>
+  )
 }

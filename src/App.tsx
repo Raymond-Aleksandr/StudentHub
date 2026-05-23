@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, CalendarDays, FileUp, GraduationCap, Home as HomeIcon, ListChecks, LogOut, Palette, X } from 'lucide-react'
+import { Bell, BellOff, BookOpen, CalendarDays, FileUp, GraduationCap, Home as HomeIcon, ListChecks, LogOut, Palette, X } from 'lucide-react'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import BottomNav from './components/BottomNav'
@@ -10,8 +10,13 @@ import TasksPage from './pages/TasksPage'
 import CalendarPage from './pages/CalendarPage'
 import ExamsPage from './pages/ExamsPage'
 import CoursesPage from './pages/CoursesPage'
-import { PlannerProvider } from './data/usePlanner'
-import { auth, onAuthStateChanged, signOut, type LocalUser } from './localAuth'
+import { PlannerProvider, usePlanner } from './data/usePlanner'
+import { formatCountdown, formatDeadlineType, getDaysUntil, getEventDeadlineType, sortEventsByDate } from './domain/deadlines'
+import { formatReminderDate, getReminderDaysBefore, shouldScheduleReminder } from './domain/notifications'
+import { clearAppBadge } from './native/appBadge'
+import { isNativeRuntime } from './native/runtime'
+import { getNavResetAt, isActiveNavPath, scrollPlannerToTop } from './navReset'
+import { auth, ensureNativeDeviceUser, onAuthStateChanged, signOut, type LocalUser } from './localAuth'
 import './App.css'
 import './planner.css'
 
@@ -86,20 +91,6 @@ function applyTweaks(tweaks: ThemeTweaks) {
   document.documentElement.dataset.density = tweaks.density
 }
 
-function requestPageTop(behavior: ScrollBehavior = 'smooth') {
-  window.scrollTo({ top: 0, left: 0, behavior })
-}
-
-function navResetState() {
-  return { navResetAt: Date.now() }
-}
-
-function getNavResetKey(state: unknown) {
-  if (!state || typeof state !== 'object' || !('navResetAt' in state)) return 'base'
-  const resetAt = (state as { navResetAt?: unknown }).navResetAt
-  return typeof resetAt === 'number' ? String(resetAt) : 'base'
-}
-
 function getPlannerCopy(pathname: string) {
   const key = pathname.split('/').filter(Boolean)[0] as keyof typeof plannerViewCopy | undefined
   return plannerViewCopy[key ?? 'dashboard'] ?? plannerViewCopy.dashboard
@@ -116,6 +107,7 @@ function PlannerShell({
   onToggleTweaks,
   onCloseTweaks,
   onSetTweak,
+  nativeRuntime,
 }: {
   children: ReactNode
   tweaks: ThemeTweaks
@@ -123,23 +115,22 @@ function PlannerShell({
   onToggleTweaks: () => void
   onCloseTweaks: () => void
   onSetTweak: <K extends keyof ThemeTweaks>(key: K, value: ThemeTweaks[K]) => void
+  nativeRuntime: boolean
 }) {
   const location = useLocation()
   const navigate = useNavigate()
   const copy = getPlannerCopy(location.pathname)
   const isDashboard = location.pathname === '/dashboard' || location.pathname === '/'
-  const openNavItem = (path: string) => {
-    if (location.pathname === path) {
-      requestPageTop()
-      void navigate(path, { replace: true, state: navResetState() })
-      return
-    }
-
-    void navigate(path)
-  }
 
   const handleLogout = async () => {
     await signOut(auth)
+  }
+
+  const handleNavClick = (path: string, resetAt: number) => {
+    navigate(path, {
+      replace: isActiveNavPath(location.pathname, path),
+      state: { navResetAt: resetAt },
+    })
   }
 
   return (
@@ -151,22 +142,24 @@ function PlannerShell({
         </div>
         <nav className="nav-stack">
           {navItems.map(({ label, path, icon: Icon }) => (
-            <button key={path} className={`nav-btn ${location.pathname === path ? 'active' : ''}`} onClick={() => openNavItem(path)} type="button">
+            <button key={path} className={`nav-btn ${location.pathname === path ? 'active' : ''}`} onClick={(event) => handleNavClick(path, event.timeStamp)} type="button">
               <Icon size={18} />
               <span>{label}</span>
             </button>
           ))}
         </nav>
-        <div className="side-foot">
-          <span className="avatar">SR</span>
-          <div>
-            <strong>Student</strong>
-            <span>local profile</span>
+        {!nativeRuntime && (
+          <div className="side-foot">
+            <span className="avatar">SR</span>
+            <div>
+              <strong>Student</strong>
+              <span>local profile</span>
+            </div>
+            <button onClick={handleLogout} aria-label="Log out">
+              <LogOut size={16} />
+            </button>
           </div>
-          <button onClick={handleLogout} aria-label="Log out">
-            <LogOut size={16} />
-          </button>
-        </div>
+        )}
       </aside>
       <main className="app-main">
         <header className="topbar">
@@ -183,7 +176,7 @@ function PlannerShell({
         </header>
         {children}
       </main>
-      {tweaksOpen && <TweaksPanel tweaks={tweaks} setTweak={onSetTweak} onClose={onCloseTweaks} />}
+      {tweaksOpen && <TweaksPanel tweaks={tweaks} setTweak={onSetTweak} onClose={onCloseTweaks} showNotifications showAccount={!nativeRuntime} />}
     </div>
   )
 }
@@ -192,11 +185,19 @@ function TweaksPanel({
   tweaks,
   setTweak,
   onClose,
+  showNotifications = false,
+  showAccount = false,
 }: {
   tweaks: ThemeTweaks
   setTweak: <K extends keyof ThemeTweaks>(key: K, value: ThemeTweaks[K]) => void
   onClose: () => void
+  showNotifications?: boolean
+  showAccount?: boolean
 }) {
+  const handleLogout = async () => {
+    await signOut(auth)
+  }
+
   return (
     <div className="tweaks-panel" role="dialog" aria-label="Tweaks">
       <div className="tp-head">
@@ -238,6 +239,93 @@ function TweaksPanel({
           />
         </div>
       </div>
+      {showAccount && (
+        <div className="tp-section tp-account-section">
+          <div className="tp-account">
+            <span className="tp-account-avatar">SR</span>
+            <span>
+              <strong>Student</strong>
+              <small>local profile</small>
+            </span>
+            <button type="button" onClick={handleLogout}>
+              <LogOut size={15} />
+              <span>Log out</span>
+            </button>
+          </div>
+        </div>
+      )}
+      {showNotifications && <NotificationSettings />}
+    </div>
+  )
+}
+
+function NotificationSettings() {
+  const { events, updateEvent } = usePlanner()
+  const upcoming = sortEventsByDate(events.filter((event) => !event.completed && event.date && getDaysUntil(event.date) >= 0)).slice(0, 8)
+
+  const updateReminder = (event: typeof upcoming[number], enabled: boolean, days = getReminderDaysBefore(event)) => {
+    void updateEvent(event, {
+      title: event.title,
+      courseCode: event.courseCode,
+      date: event.date,
+      time: event.time,
+      durationMinutes: event.durationMinutes,
+      weight: event.weight,
+      score: event.score,
+      location: event.location,
+      format: event.format,
+      deadlineType: getEventDeadlineType(event),
+      reminderEnabled: enabled,
+      reminderDaysBefore: days,
+    })
+  }
+
+  return (
+    <div className="tp-section tp-notifications">
+      <div className="tp-notification-head">
+        <label className="tp-label">Notifications</label>
+      </div>
+      {upcoming.length ? (
+        <div className="tp-notification-list">
+          {upcoming.map((event) => {
+            const enabled = event.reminderEnabled !== false
+            const days = getReminderDaysBefore(event)
+            return (
+              <article key={`${event.title}-${event.date}-${event.time}-${event.courseCode}`} className="tp-notification-item">
+                <button
+                  className={`tp-notification-toggle ${enabled ? 'on' : ''}`}
+                  onClick={() => updateReminder(event, !enabled)}
+                  aria-label={enabled ? `Disable reminder for ${event.title}` : `Enable reminder for ${event.title}`}
+                  aria-pressed={enabled}
+                >
+                  {enabled ? <Bell size={14} /> : <BellOff size={14} />}
+                </button>
+                <div className="tp-notification-body">
+                  <div className="tp-notification-title">{event.title}</div>
+                  <div className="mono tp-notification-meta">
+                    {[event.courseCode, formatDeadlineType(getEventDeadlineType(event)), formatCountdown(event.date)].filter(Boolean).join(' · ')}
+                  </div>
+                  <div className="mono tp-notification-meta">
+                    {enabled ? `${shouldScheduleReminder(event) ? 'Scheduled' : 'Enabled'} · ${formatReminderDate(event)}` : 'Off'}
+                  </div>
+                </div>
+                <input
+                  className="tp-notification-days"
+                  type="number"
+                  min="0"
+                  max="30"
+                  value={days}
+                  disabled={!enabled}
+                  aria-label={`Reminder days before ${event.title}`}
+                  onChange={(inputEvent) => updateReminder(event, enabled, Math.max(0, Math.min(30, Number(inputEvent.target.value) || 0)))}
+                />
+              </article>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="tp-note">Future tasks and exams will appear here. New items default to notifications on.</p>
+      )}
     </div>
   )
 }
@@ -273,6 +361,7 @@ function ProtectedPlannerPage({
   onToggleTweaks,
   onCloseTweaks,
   onSetTweak,
+  nativeRuntime,
 }: {
   user: LocalUser | null
   children: ReactNode
@@ -281,8 +370,9 @@ function ProtectedPlannerPage({
   onToggleTweaks: () => void
   onCloseTweaks: () => void
   onSetTweak: <K extends keyof ThemeTweaks>(key: K, value: ThemeTweaks[K]) => void
+  nativeRuntime: boolean
 }) {
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to={nativeRuntime ? '/dashboard' : '/login'} replace />
 
   return (
     <PlannerProvider>
@@ -292,6 +382,7 @@ function ProtectedPlannerPage({
         onToggleTweaks={onToggleTweaks}
         onCloseTweaks={onCloseTweaks}
         onSetTweak={onSetTweak}
+        nativeRuntime={nativeRuntime}
       >
         {children}
       </PlannerShell>
@@ -306,6 +397,7 @@ function AuthenticatedRoutes({
   onToggleTweaks,
   onCloseTweaks,
   onSetTweak,
+  nativeRuntime,
 }: {
   user: LocalUser | null
   tweaks: ThemeTweaks
@@ -313,29 +405,31 @@ function AuthenticatedRoutes({
   onToggleTweaks: () => void
   onCloseTweaks: () => void
   onSetTweak: <K extends keyof ThemeTweaks>(key: K, value: ThemeTweaks[K]) => void
+  nativeRuntime: boolean
 }) {
   const location = useLocation()
   const showBottomNav = Boolean(user && !['/', '/login'].includes(location.pathname))
-  const showPublicTweaks = ['/', '/login'].includes(location.pathname)
-  const protectedProps = { user, tweaks, tweaksOpen, onToggleTweaks, onCloseTweaks, onSetTweak }
-  const pageResetKey = getNavResetKey(location.state)
+  const showPublicTweaks = !nativeRuntime && (location.pathname === '/' || location.pathname === '/login')
+  const protectedProps = { user, tweaks, tweaksOpen, onToggleTweaks, onCloseTweaks, onSetTweak, nativeRuntime }
+  const navResetAt = getNavResetAt(location.state)
 
   useEffect(() => {
-    requestPageTop()
-  }, [location.pathname])
+    if (!navResetAt) return
+    scrollPlannerToTop()
+  }, [navResetAt])
 
   return (
     <>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<ProtectedPlannerPage {...protectedProps}><TodayPage key={pageResetKey} /></ProtectedPlannerPage>} />
-        <Route path="/import" element={<ProtectedPlannerPage {...protectedProps}><ImportPage key={pageResetKey} /></ProtectedPlannerPage>} />
+        <Route path="/" element={nativeRuntime ? <Navigate to="/dashboard" replace /> : <Home />} />
+        <Route path="/login" element={nativeRuntime ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/dashboard" element={<ProtectedPlannerPage {...protectedProps}><TodayPage key={`dashboard-${navResetAt}`} /></ProtectedPlannerPage>} />
+        <Route path="/import" element={<ProtectedPlannerPage {...protectedProps}><ImportPage key={`import-${navResetAt}`} /></ProtectedPlannerPage>} />
         <Route path="/syllabus" element={<Navigate to="/import" replace />} />
-        <Route path="/tasks" element={<ProtectedPlannerPage {...protectedProps}><TasksPage key={pageResetKey} /></ProtectedPlannerPage>} />
-        <Route path="/calendar" element={<ProtectedPlannerPage {...protectedProps}><CalendarPage key={pageResetKey} /></ProtectedPlannerPage>} />
-        <Route path="/exams" element={<ProtectedPlannerPage {...protectedProps}><ExamsPage key={pageResetKey} /></ProtectedPlannerPage>} />
-        <Route path="/course-info" element={<ProtectedPlannerPage {...protectedProps}><CoursesPage key={pageResetKey} /></ProtectedPlannerPage>} />
+        <Route path="/tasks" element={<ProtectedPlannerPage {...protectedProps}><TasksPage key={`tasks-${navResetAt}`} /></ProtectedPlannerPage>} />
+        <Route path="/calendar" element={<ProtectedPlannerPage {...protectedProps}><CalendarPage key={`calendar-${navResetAt}`} /></ProtectedPlannerPage>} />
+        <Route path="/exams" element={<ProtectedPlannerPage {...protectedProps}><ExamsPage key={`exams-${navResetAt}`} /></ProtectedPlannerPage>} />
+        <Route path="/course-info" element={<ProtectedPlannerPage {...protectedProps}><CoursesPage key={`course-info-${navResetAt}`} /></ProtectedPlannerPage>} />
         <Route path="/assignments" element={<Navigate to="/tasks" replace />} />
       </Routes>
       {showPublicTweaks && (
@@ -357,14 +451,22 @@ function App() {
   const [isAuthReady, setIsAuthReady] = useState(false)
   const [tweaks, setTweaks] = useState<ThemeTweaks>(() => readStoredTweaks())
   const [tweaksOpen, setTweaksOpen] = useState(false)
+  const nativeRuntime = isNativeRuntime()
 
   useEffect(() => {
+    void clearAppBadge()
+  }, [])
+
+  useEffect(() => {
+    if (nativeRuntime) {
+      void ensureNativeDeviceUser(auth)
+    }
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
       setUser(nextUser)
       setIsAuthReady(true)
     })
     return unsubscribe
-  }, [])
+  }, [nativeRuntime])
 
   useEffect(() => {
     applyTweaks(tweaks)
@@ -386,6 +488,7 @@ function App() {
         onToggleTweaks={() => setTweaksOpen((open) => !open)}
         onCloseTweaks={() => setTweaksOpen(false)}
         onSetTweak={handleSetTweak}
+        nativeRuntime={nativeRuntime}
       />
     </BrowserRouter>
   )

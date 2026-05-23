@@ -17,6 +17,7 @@ export interface CalendarEvent {
   deadlineType: DeadlineType
   sourceUploadId: string
   completed: boolean
+  reminderEnabled: boolean
   reminderDaysBefore: number
 }
 
@@ -74,6 +75,8 @@ export interface SyllabusUpload {
     type: 'assignment' | 'exam'
     deadlineType: DeadlineType
     priority: 'high' | 'medium' | 'low'
+    reminderEnabled?: boolean
+    reminderDaysBefore?: number
   }>
 }
 
@@ -90,6 +93,8 @@ export interface DraftEvent {
   location: string
   format: string
   deadlineType: DeadlineType
+  reminderEnabled: boolean
+  reminderDaysBefore: number
 }
 
 // Calendar view types.
@@ -108,8 +113,10 @@ export interface CalendarDay {
 // Import state.
 
 export type ImportTone = 'idle' | 'busy' | 'done' | 'error'
+export type ParserCheckState = 'testing' | 'verified' | 'failed'
 
 export interface ImportState {
   tone: ImportTone
   message: string
+  parserCheck?: ParserCheckState
 }

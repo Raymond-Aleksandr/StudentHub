@@ -1,9 +1,9 @@
 .studenthub-bottom-nav {
   position: fixed;
   z-index: 1000;
-  right: 12px;
-  bottom: max(12px, env(safe-area-inset-bottom));
-  left: 12px;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
@@ -14,6 +14,7 @@
   box-shadow: var(--shadow-lg);
   backdrop-filter: saturate(140%) blur(14px);
   animation: bottom-nav-in 420ms cubic-bezier(.2,.75,.18,1) both;
+  transform: translateZ(0);
 }
 
 .studenthub-bottom-nav button {
@@ -31,9 +32,17 @@
   transition: background 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
-.studenthub-bottom-nav button:hover {
-  color: var(--ink);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .studenthub-bottom-nav button:hover {
+    color: var(--ink);
+    transform: translateY(-1px);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .studenthub-bottom-nav button:active {
+    transform: scale(0.98);
+  }
 }
 
 .studenthub-bottom-nav button.active {

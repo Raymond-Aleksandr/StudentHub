@@ -1,15 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Check, Pencil, Sparkles, Trash2, X } from 'lucide-react'
+import { Check, Pencil, ShieldCheck, Sparkles, Trash2, X } from 'lucide-react'
 import { usePlanner } from '../data/usePlanner'
 import { deadlineTypeToEventType, getEventDeadlineType } from '../domain/deadlines'
-import type { SyllabusUpload } from '../domain/types'
-import { getSyllabusParserEndpoint } from '../syllabusParser'
+import type { ParserCheckState, SyllabusUpload } from '../domain/types'
 import { tagVarForColor } from '../domain/courseMeta'
 import { useModalBodyLock } from '../components/useModalBodyLock'
+import {
+  clearNativeAiSettings,
+  defaultNativeAiSettings,
+  getDefaultNativeAiModel,
+  getNativeAiModelOption,
+  getNativeAiModelOptions,
+  getNativeAiProviderOption,
+  isNativeAiProvider,
+  nativeAiProviderOptions,
+  normalizeNativeAiSettings,
+  readNativeAiSettings,
+  saveNativeAiSettings,
+  type NativeAiSettings,
+  verifyNativeAiSettings,
+} from '../native/aiSettings'
+import { isNativeRuntime } from '../native/runtime'
 
 type ParserStatus = {
-  tone: 'checking' | 'online' | 'blocked' | 'offline'
+  tone: 'checking' | 'configured' | 'online' | 'blocked' | 'offline'
   label: string
   detail: string
 }
@@ -20,69 +35,129 @@ function getUploadCounts(upload: SyllabusUpload) {
   return { courses: upload.parsedCourse ? 1 : 0, tasks: events.length - exams, exams }
 }
 
+function getParserStatus(settings: NativeAiSettings, parserCheck?: ParserCheckState): ParserStatus {
+  const hasKey = Boolean(settings.apiKey.trim())
+  const providerOption = getNativeAiProviderOption(settings.provider)
+
+  if (!hasKey) {
+    return {
+      tone: 'blocked',
+      label: 'Setup needed',
+      detail: 'choose provider and add API key',
+    }
+  }
+
+  if (parserCheck === 'testing') {
+    return {
+      tone: 'checking',
+      label: 'Checking',
+      detail: `testing ${providerOption.label}`,
+    }
+  }
+
+  if (parserCheck === 'verified') {
+    return {
+      tone: 'online',
+      label: 'Verified',
+      detail: `${providerOption.label} check passed`,
+    }
+  }
+
+  if (parserCheck === 'failed') {
+    return {
+      tone: 'offline',
+      label: 'Check failed',
+      detail: 'last check did not complete',
+    }
+  }
+
+  return {
+    tone: 'configured',
+    label: 'Configured',
+    detail: 'save settings to verify',
+  }
+}
+
 export default function ImportPage() {
-  const { uploads, importState, importFiles, removeUpload, updateUpload } = usePlanner()
+  const { uploads, importState, importFiles, removeUpload, updateUpload, setParserCheck } = usePlanner()
   const [drag, setDrag] = useState(false)
   const [editingUpload, setEditingUpload] = useState<SyllabusUpload | null>(null)
   const [uploadDraft, setUploadDraft] = useState<SyllabusUpload | null>(null)
-  const [parserStatus, setParserStatus] = useState<ParserStatus>({
-    tone: 'checking',
-    label: 'Checking',
-    detail: 'testing parser endpoint',
-  })
+  const [nativeAiSettings, setNativeAiSettings] = useState<NativeAiSettings>(defaultNativeAiSettings)
+  const [nativeSettingsMessage, setNativeSettingsMessage] = useState('')
+  const [nativeAiExpanded, setNativeAiExpanded] = useState(true)
+  const [nativeAiChecking, setNativeAiChecking] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const parserEndpoint = useMemo(() => getSyllabusParserEndpoint(), [])
-  const parserHost = useMemo(() => {
-    try {
-      const url = new URL(parserEndpoint)
-      return url.hostname === '127.0.0.1' ? 'localhost Worker' : url.hostname
-    } catch {
-      return 'configured endpoint'
-    }
-  }, [parserEndpoint])
+  const nativeRuntime = useMemo(() => isNativeRuntime(), [])
+  const selectedProviderOption = getNativeAiProviderOption(nativeAiSettings.provider)
+  const modelOptions = getNativeAiModelOptions(nativeAiSettings.provider)
+  const selectedModelOption = getNativeAiModelOption(nativeAiSettings.provider, nativeAiSettings.model)
+  const parserStatus = useMemo(
+    () => getParserStatus(nativeAiSettings, importState.parserCheck),
+    [importState.parserCheck, nativeAiSettings],
+  )
 
   useEffect(() => {
-    const controller = new AbortController()
-
     async function checkParser() {
-      setParserStatus({
-        tone: 'checking',
-        label: 'Checking',
-        detail: parserHost,
-      })
-
-      try {
-        const response = await fetch(parserEndpoint, {
-          method: 'OPTIONS',
-          cache: 'no-store',
-          signal: controller.signal,
-        })
-        if (response.ok || response.status === 204) {
-          setParserStatus({
-            tone: 'online',
-            label: 'Online',
-            detail: `${parserHost} accepts this origin`,
-          })
-          return
-        }
-        setParserStatus({
-          tone: 'blocked',
-          label: 'Blocked',
-          detail: `origin rejected by ${parserHost}`,
-        })
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return
-        setParserStatus({
-          tone: 'offline',
-          label: 'Offline',
-          detail: `cannot reach ${parserHost}`,
-        })
-      }
+      const settings = await readNativeAiSettings()
+      setNativeAiSettings(settings)
+      setNativeAiExpanded(!settings.apiKey.trim())
     }
 
     void checkParser()
-    return () => controller.abort()
-  }, [parserEndpoint, parserHost])
+  }, [])
+
+  const saveNativeAi = async () => {
+    const nextSettings = normalizeNativeAiSettings({
+      ...nativeAiSettings,
+      apiKey: nativeAiSettings.apiKey.trim(),
+    })
+    await saveNativeAiSettings(nextSettings)
+    setNativeAiSettings(nextSettings)
+
+    if (!nextSettings.apiKey) {
+      setNativeSettingsMessage('API key cleared.')
+      setParserCheck('failed', 'Parser key cleared. Add a key to parse syllabi.', 'idle')
+      setNativeAiExpanded(true)
+      return
+    }
+
+    const providerLabel = getNativeAiProviderOption(nextSettings.provider).label
+    setNativeSettingsMessage(`Checking ${providerLabel}...`)
+    setParserCheck('testing', `Checking ${providerLabel} parser settings...`)
+    setNativeAiChecking(true)
+
+    try {
+      await verifyNativeAiSettings(nextSettings)
+      setNativeSettingsMessage('Provider check passed.')
+      setParserCheck('verified', `${providerLabel} key and model verified.`)
+      setNativeAiExpanded(false)
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Provider check failed.'
+      setNativeSettingsMessage(detail)
+      setParserCheck('failed', `${providerLabel} check failed. ${detail}`)
+      setNativeAiExpanded(true)
+    } finally {
+      setNativeAiChecking(false)
+    }
+  }
+
+  const clearNativeAi = async () => {
+    await clearNativeAiSettings()
+    setNativeAiSettings(defaultNativeAiSettings)
+    setNativeSettingsMessage('API key cleared from this device.')
+    setParserCheck('failed', 'Parser key cleared. Add a key to parse syllabi.', 'idle')
+    setNativeAiExpanded(true)
+  }
+
+  const updateNativeAiProvider = (value: string) => {
+    if (!isNativeAiProvider(value)) return
+    setNativeAiSettings({
+      ...nativeAiSettings,
+      provider: value,
+      model: getDefaultNativeAiModel(value),
+    })
+  }
 
   const startEdit = (upload: SyllabusUpload) => {
     setEditingUpload(upload)
@@ -120,7 +195,9 @@ export default function ImportPage() {
         </div>
         <span className="eyebrow">Drop files</span>
         <h2 className="dz-h">{importState.tone === 'busy' ? 'Parsing your syllabus...' : 'Drop syllabi here'}</h2>
-        <p className="dz-sub">PDF uploads are parsed by your Cloudflare Worker, then saved locally in this browser. Drag multiple files at once.</p>
+        <p className="dz-sub">
+          PDF uploads are parsed with your selected AI provider. Your key stays in this {nativeRuntime ? 'app' : 'browser'} profile.
+        </p>
         <div className="dz-actions">
           <button className="btn btn-accent" onClick={() => fileInputRef.current?.click()} disabled={importState.tone === 'busy'}>
             <Sparkles size={15} /> Choose PDFs
@@ -134,7 +211,7 @@ export default function ImportPage() {
       <section className="worker-row">
         <div className="card card-tight worker-card" data-status={parserStatus.tone}>
           <div className="worker-card-head">
-            <span className="eyebrow">Parser</span>
+            <span className="eyebrow">AI parser</span>
             <span className="worker-live-dot" />
           </div>
           <div className="worker-val">{parserStatus.label}</div>
@@ -148,8 +225,86 @@ export default function ImportPage() {
         <div className="card card-tight worker-card">
           <span className="eyebrow">Storage</span>
           <div className="worker-val">local</div>
-          <div className="worker-sub mono">no frontend secrets</div>
+          <div className="worker-sub mono">{nativeRuntime ? 'device profile' : 'browser profile'}</div>
         </div>
+      </section>
+
+      <section className={`card card-tight native-ai-card ${nativeAiExpanded ? '' : 'is-collapsed'}`}>
+          <div className="native-ai-head">
+            <div className="native-ai-title">
+              <span className="eyebrow">AI provider</span>
+              <h2>Parser settings</h2>
+            </div>
+            {!nativeAiExpanded && (
+              <div className="native-ai-head-actions">
+                <button className="native-ai-edit" type="button" onClick={() => setNativeAiExpanded(true)}>
+                  Edit
+                </button>
+              </div>
+            )}
+          </div>
+          {!nativeAiExpanded ? (
+            <div className="native-ai-summary">
+              <span className="mono">{selectedModelOption?.label ?? nativeAiSettings.model}</span>
+              <span>{nativeSettingsMessage || 'Key saved on this device.'}</span>
+            </div>
+          ) : (
+            <>
+              <p className="native-ai-copy">
+                Choose the AI service you already use. The key stays in this {nativeRuntime ? 'app' : 'browser'}, and only the uploaded PDF is sent for parsing.
+              </p>
+              <div className="native-ai-fields">
+                <label className="native-ai-field">
+                  <span className="modal-section-label">Provider</span>
+                  <select
+                    className="modal-input"
+                    value={nativeAiSettings.provider}
+                    onChange={(event) => updateNativeAiProvider(event.target.value)}
+                  >
+                    {nativeAiProviderOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="native-ai-field">
+                  <span className="modal-section-label">{selectedProviderOption.keyLabel}</span>
+                  <input
+                    className="modal-input"
+                    type="password"
+                    autoComplete="off"
+                    value={nativeAiSettings.apiKey}
+                    onChange={(event) => setNativeAiSettings({ ...nativeAiSettings, apiKey: event.target.value })}
+                    placeholder={selectedProviderOption.keyPlaceholder}
+                  />
+                </label>
+                <label className="native-ai-field">
+                  <span className="modal-section-label">Model preset</span>
+                  <select
+                    className="modal-input"
+                    value={nativeAiSettings.model}
+                    onChange={(event) => setNativeAiSettings({ ...nativeAiSettings, model: event.target.value })}
+                  >
+                    {modelOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="native-ai-model-note">
+                <ShieldCheck size={15} />
+                <span>{selectedProviderOption.detail} {selectedModelOption?.detail ?? ''}</span>
+              </div>
+              <div className="native-ai-actions">
+                <button className="modal-btn modal-btn-save" type="button" onClick={() => void saveNativeAi()} disabled={nativeAiChecking}>
+                  <Check size={15} />{nativeAiChecking ? 'Checking' : 'Save'}
+                </button>
+                <button className="modal-btn modal-btn-cancel" type="button" onClick={() => void clearNativeAi()}><X size={15} />Clear</button>
+                <div className="native-ai-message mono">
+                  {nativeSettingsMessage || 'No server storage. No key is committed or synced.'}
+                </div>
+              </div>
+            </>
+          )}
       </section>
 
       <div className="sec-head">

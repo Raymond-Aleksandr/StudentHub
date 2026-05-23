@@ -28,5 +28,21 @@ sketch
 worker/.dev.vars
 worker/.wrangler/
 
+# Local uploads and private course files
+uploads/
+upload/
+private-uploads/
+imported-syllabi/
+syllabi/
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.csv
+*.ics
+
 # IDE files
 /.idea/

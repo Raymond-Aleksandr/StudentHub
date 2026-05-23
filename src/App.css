@@ -1,5 +1,5 @@
 .app-root {
-  --tabbar-h: 76px;
+  --tabbar-h: 94px;
   min-height: 100vh;
   background: var(--bg);
 }
@@ -14,7 +14,7 @@
 .app-main {
   width: min(100%, 760px);
   margin: 0 auto;
-  padding: 0 16px calc(var(--tabbar-h) + 56px);
+  padding: 0 max(14px, env(safe-area-inset-left)) calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px) max(14px, env(safe-area-inset-right));
 }
 
 @media (min-width: 920px) {

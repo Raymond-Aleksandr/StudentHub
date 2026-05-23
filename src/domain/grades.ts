@@ -2,7 +2,7 @@ import { getDaysUntil } from './deadlines'
 import { courseMatchesEvent } from './courseMeta'
 import type { CalendarEvent, ClassInfo } from './types'
 
-export function roundedGrade(value: number) {
+function roundedGrade(value: number) {
   return Math.round(value * 10) / 10
 }
 
@@ -19,7 +19,7 @@ export function getWeightStats(events: Array<Pick<CalendarEvent, 'weight' | 'com
   }
 }
 
-export function getRunningGrade(events: Array<Pick<CalendarEvent, 'weight' | 'score'>>) {
+function getRunningGrade(events: Array<Pick<CalendarEvent, 'weight' | 'score'>>) {
   const graded = events.filter((event) => typeof event.weight === 'number' && event.weight > 0 && typeof event.score === 'number')
   const gradedWeight = roundedGrade(graded.reduce((sum, event) => sum + (event.weight ?? 0), 0))
   const weightedEarned = graded.reduce((sum, event) => sum + ((event.weight ?? 0) * ((event.score ?? 0) / 100)), 0)
@@ -29,7 +29,7 @@ export function getRunningGrade(events: Array<Pick<CalendarEvent, 'weight' | 'sc
   }
 }
 
-export function getCourseEvents(course: Pick<ClassInfo, 'code'>, events: CalendarEvent[]) {
+function getCourseEvents(course: Pick<ClassInfo, 'code'>, events: CalendarEvent[]) {
   return events.filter((event) => courseMatchesEvent(course, event))
 }
 

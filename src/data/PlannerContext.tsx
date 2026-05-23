@@ -8,12 +8,14 @@ import {
   subscribeToClasses,
   subscribeToSyllabusUploads,
 } from '../data/storage'
-import type { CalendarEvent, ClassInfo, SyllabusUpload, DraftEvent, ImportState } from '../domain/types'
+import type { CalendarEvent, ClassInfo, SyllabusUpload, DraftEvent, ImportState, ImportTone, ParserCheckState } from '../domain/types'
 import { deadlineTypeToEventType, formatCountdown, getDaysUntil, getEventDeadlineType, isSameCalendarEvent, sortEventsByDate } from '../domain/deadlines'
 import { mergeCourse, mergeEvents, normalizeCourse, normalizeEvents, nextCourseId } from '../domain/merge'
 import { normalizeDurationMinutes, normalizePercent, normalizeWeight } from '../domain/courseMeta'
+import { defaultReminderDaysBefore } from '../domain/notifications'
 import { WEEKDAYS } from '../domain/calendar'
 import { parseSyllabusPdf } from '../syllabusParser'
+import { rescheduleLocalNotifications } from '../native/localNotifications'
 
 // Context shape.
 
@@ -38,6 +40,7 @@ interface PlannerActions {
   importFiles: (files: FileList) => Promise<void>
   removeUpload: (upload: SyllabusUpload) => Promise<void>
   updateUpload: (target: SyllabusUpload, draft: SyllabusUpload) => Promise<void>
+  setParserCheck: (parserCheck: ParserCheckState, message: string, tone?: ImportTone) => void
 }
 
 interface PlannerDerived {
@@ -77,6 +80,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     return () => { unsubClasses(); unsubEvents(); unsubUploads() }
   }, [])
 
+  useEffect(() => {
+    void rescheduleLocalNotifications(events)
+  }, [events])
+
   // Derived data.
 
   const upcomingEvents = useMemo(() =>
@@ -86,7 +93,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
 
   const reminders = useMemo(() =>
     upcomingEvents
-      .filter((e) => getDaysUntil(e.date) <= (e.reminderDaysBefore ?? (e.type === 'exam' ? 7 : 2)))
+      .filter((e) => e.reminderEnabled !== false && getDaysUntil(e.date) <= (e.reminderDaysBefore ?? defaultReminderDaysBefore(e.type)))
       .slice(0, 4),
     [upcomingEvents],
   )
@@ -122,6 +129,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     if (!uid) return
     setEvents(next)
     await saveCalendarEvents(uid, next)
+    void rescheduleLocalNotifications(next)
   }
 
   const persistClasses = async (next: ClassInfo[]) => {
@@ -129,6 +137,14 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     if (!uid) return
     setClasses(next)
     await saveClasses(uid, next)
+  }
+
+  const setParserCheck = (parserCheck: ParserCheckState, message: string, tone?: ImportTone) => {
+    setImportState({
+      tone: tone ?? (parserCheck === 'testing' ? 'busy' : parserCheck === 'failed' ? 'error' : 'done'),
+      message,
+      parserCheck,
+    })
   }
 
   // Actions.
@@ -160,7 +176,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       deadlineType: draft.deadlineType,
       priority: type === 'exam' ? 'high' : 'medium',
       completed: false,
-      reminderDaysBefore: type === 'exam' ? 7 : 2,
+      reminderEnabled: draft.reminderEnabled,
+      reminderDaysBefore: draft.reminderDaysBefore ?? defaultReminderDaysBefore(type),
       sourceUploadId: '',
     }
     await persistEvents(mergeEvents(events, [newEvent]))
@@ -185,7 +202,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         type,
         deadlineType: draft.deadlineType,
         priority: type === 'exam' ? 'high' : e.priority,
-        reminderDaysBefore: e.reminderDaysBefore ?? (type === 'exam' ? 7 : 2),
+        reminderEnabled: draft.reminderEnabled,
+        reminderDaysBefore: draft.reminderDaysBefore ?? defaultReminderDaysBefore(type),
       }
     })
     await persistEvents(sortEventsByDate(nextEvents))
@@ -234,7 +252,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       }
 
       const uploadId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`
-      setImportState({ tone: 'busy', message: `Parsing ${file.name}...` })
+      setImportState({ tone: 'busy', message: `Parsing ${file.name}...`, parserCheck: 'testing' })
 
       try {
         const parsed = await parseSyllabusPdf(file)
@@ -277,11 +295,12 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         await saveSyllabusUploads(uid, nextUploads)
         setImportState({
           tone: 'done',
-          message: `${file.name}: auto-filled ${importSummary || 'available text'} with the Cloudflare Worker parser.`,
+          message: `${file.name}: auto-filled ${importSummary || 'available text'} with the local AI parser.`,
+          parserCheck: 'verified',
         })
       } catch (error) {
         const detail = error instanceof Error ? ` ${error.message}` : ''
-        setImportState({ tone: 'error', message: `Could not import ${file.name}. Worker parser is required; no browser fallback.${detail}` })
+        setImportState({ tone: 'error', message: `Could not import ${file.name}.${detail}`, parserCheck: 'failed' })
       }
     }
   }
@@ -314,7 +333,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     classes, events, uploads, importState,
     toggleComplete, removeEvent, addDraftEvent, updateEvent,
     addCourse, updateCourse, removeCourse,
-    importFiles, removeUpload, updateUpload,
+    importFiles, removeUpload, updateUpload, setParserCheck,
     upcomingEvents, reminders, todayClasses, taskEvents, examEvents, stats,
   }
 

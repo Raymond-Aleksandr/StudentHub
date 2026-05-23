@@ -34,7 +34,7 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
-  padding: 22px 4px 18px;
+  padding: max(18px, calc(env(safe-area-inset-top) + 4px)) 4px 16px;
   border-bottom: 1px solid var(--line);
   background: color-mix(in oklab, var(--bg) 90%, transparent);
   backdrop-filter: blur(10px);

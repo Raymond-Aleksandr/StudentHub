@@ -311,7 +311,7 @@ function CourseEditorModal({
               autoFocus
             />
           </div>
-          <button className="modal-icon" onClick={onClose} aria-label="Close">
+          <button className="tp-close" type="button" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -384,18 +384,18 @@ function CourseEditorModal({
           </div>
         </div>
 
-        <div className="modal-foot">
-          {onDelete ? (
-            <button className="modal-danger" onClick={onDelete}>
-              <Trash2 size={16} /> Delete
+        <div className={onDelete ? 'modal-foot three' : 'modal-foot'}>
+          {onDelete && (
+            <button className="modal-btn-delete" type="button" onClick={onDelete} aria-label="Delete course">
+              <Trash2 size={16} />
             </button>
-          ) : <span />}
-          <div className="modal-foot-actions">
-            <button className="btn btn-soft" onClick={onClose}>Cancel</button>
-            <button className="btn btn-accent" onClick={onSave} disabled={!draft.title.trim() && !draft.code.trim()}>
-              <Check size={16} /> Save
-            </button>
-          </div>
+          )}
+          <button className="modal-btn modal-btn-cancel" type="button" onClick={onClose}>
+            <X size={16} />Cancel
+          </button>
+          <button className="modal-btn modal-btn-save" type="button" onClick={onSave} disabled={!draft.title.trim() && !draft.code.trim()}>
+            <Check size={16} />Save
+          </button>
         </div>
       </section>
     </div>

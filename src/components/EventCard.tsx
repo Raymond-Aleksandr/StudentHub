@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, Pencil, Trash2, X } from 'lucide-react'
 import type { CalendarEvent, DraftEvent } from '../domain/types'
 import { formatCountdown, formatDeadlineType, getEventDeadlineType } from '../domain/deadlines'
@@ -100,7 +101,7 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
     onSave(draft)
   }
 
-  return (
+  const modal = (
     <div className="modal-backdrop" onClick={(clickEvent) => { if (clickEvent.target === clickEvent.currentTarget) onClose() }}>
       <div className="modal event-modal" role="dialog" aria-label={title}>
         <div className="modal-head">
@@ -201,4 +202,6 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }

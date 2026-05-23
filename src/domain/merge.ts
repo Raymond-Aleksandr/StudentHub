@@ -27,9 +27,45 @@ export function mergeCourse(classes: ClassInfo[], incoming: ClassInfo | null): C
 }
 
 export function mergeEvents(current: CalendarEvent[], incoming: CalendarEvent[]): CalendarEvent[] {
-  const next = [...current]
+  const next = dedupeCalendarEvents(current)
   for (const event of incoming) {
-    if (!next.some((candidate) => isSameCalendarEvent(candidate, event))) next.push(event)
+    if (!next.some((candidate) => isSameImportedAssessment(candidate, event))) next.push(event)
+  }
+  return sortEventsByDate(next)
+}
+
+function cleanIdentityText(value = '') {
+  return value.trim().replace(/\s+/g, ' ').toUpperCase()
+}
+
+function isSameImportedAssessment(left: CalendarEvent, right: CalendarEvent): boolean {
+  if (isSameCalendarEvent(left, right)) return true
+  const sameAssessment = cleanIdentityText(left.title) === cleanIdentityText(right.title) &&
+    cleanIdentityText(left.courseCode) === cleanIdentityText(right.courseCode) &&
+    left.type === right.type &&
+    left.deadlineType === right.deadlineType
+  const sameWeightedAssessment = sameAssessment &&
+    left.weight !== null &&
+    right.weight !== null &&
+    left.weight === right.weight
+  const sameExam = sameAssessment && left.type === 'exam'
+
+  if (sameWeightedAssessment || sameExam) return true
+
+  return (
+    cleanIdentityText(left.title) === cleanIdentityText(right.title) &&
+    cleanIdentityText(left.courseCode) === cleanIdentityText(right.courseCode) &&
+    left.date === right.date &&
+    left.time === right.time &&
+    left.type === right.type &&
+    left.deadlineType === right.deadlineType
+  )
+}
+
+export function dedupeCalendarEvents(events: CalendarEvent[]): CalendarEvent[] {
+  const next: CalendarEvent[] = []
+  for (const event of events) {
+    if (!next.some((candidate) => isSameImportedAssessment(candidate, event))) next.push(event)
   }
   return sortEventsByDate(next)
 }
@@ -67,7 +103,7 @@ export function normalizeCourse(
 
 export function normalizeEvents(events: Partial<CalendarEvent>[], uploadId: string): CalendarEvent[] {
   return events
-    .filter((event) => event.title && event.date)
+    .filter((event) => event.title && (event.date || event.weight !== null && event.weight !== undefined))
     .map((event) => {
       const deadlineType = event.deadlineType ?? 'assignment'
       const type = deadlineTypeToEventType(deadlineType)

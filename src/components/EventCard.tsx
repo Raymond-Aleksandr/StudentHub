@@ -95,7 +95,7 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
   }, [onClose])
 
   const saveEdit = () => {
-    if (!draft.title.trim() || !draft.date) return
+    if (!draft.title.trim()) return
     onSave(draft)
   }
 

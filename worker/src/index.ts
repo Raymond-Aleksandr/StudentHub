@@ -21,6 +21,9 @@ type ParsedEvent = {
     courseCode: string
     date: string
     time: string
+    weight: number | null
+    location: string
+    format: string
     priority: Priority
     type: EventType
     deadlineType: DeadlineType
@@ -45,7 +48,7 @@ type Env = {
 
 const DEFAULT_ALLOWED_ORIGINS = 'https://raymond-aleksandr.github.io'
 const DEFAULT_MAX_FILE_BYTES = 8 * 1024 * 1024
-const DEFAULT_MODEL = 'google/gemini-2.5-flash'
+const DEFAULT_MODEL = 'google/gemini-3.5-flash'
 const DEFAULT_PDF_ENGINE = 'cloudflare-ai'
 
 function json(data: unknown, init: ResponseInit = {}, origin = '') {
@@ -107,15 +110,40 @@ async function fileToBase64(file: File) {
 
 function schemaPrompt() {
   return [
-    'Extract a syllabus into strict JSON for a student planner.',
+    'Extract a university syllabus into strict JSON for StudentHub, a student planner.',
     'Return only JSON. No markdown. No commentary.',
+    '',
+    'Course extraction:',
+    '- Extract the official course title and full course code, including combined codes such as "IRM 3004 / OSS 3009".',
+    '- Extract lecture day, startTime, endTime, room/location, instructor name/email, and TA name/email when present.',
+    '',
+    'Date and time rules:',
     'Dates must be ISO yyyy-mm-dd. Times must be 24-hour HH:mm or empty string.',
+    'Use the term year for dates that omit a year. Example: Winter 2026 with "February 23" means "2026-02-23".',
     'Use empty strings when unknown.',
+    '',
+    'Assessment extraction:',
+    '- Use the grading/evaluation table as the source of truth for assessment titles, weights, and assessment existence.',
+    '- Extract assessment weights as numbers in the "weight" field. Use null only when no weight is listed.',
+    '- Include weighted assessments even when they do not have an exact date; set date "" and time "".',
+    '- Prefer due dates from the grading/evaluation table. Use schedule notes only to fill missing dates for the same named assessment.',
+    '- Do not duplicate the same assessment when it appears in both the grading table and weekly schedule notes.',
+    '- If one assessment has multiple possible dates and one shared weight, create one event using the earliest date and put the other dates in "format". Do not repeat the full weight on multiple events.',
+    '- If a final exam is listed with a weight but no exact date, include exactly one Final Exam event with date "" and time "".',
+    '- Never infer a final exam date from "official final exam period", "exam review", or university sessional dates.',
+    '',
+    'Exclude non-assessment content:',
+    '- Do not turn lecture topics, readings, reading weeks, course introductions, exam review sessions, holidays, withdrawal deadlines, accommodation deadlines, or university calendar dates into planner events.',
+    '',
+    'Classification rules:',
     'Event type must be "assignment" or "exam".',
     'deadlineType must be one of: assignment, quiz, test, exam, presentation, project, lab-report, other.',
+    'Use type "exam" only for quiz, test, midterm, or final exam assessments.',
+    'Use deadlineType "assignment" for essays, reports, briefs, tutorial assignments, and evaluation reports unless a more specific listed type clearly applies.',
     'priority must be high, medium, or low.',
+    '',
     'Shape:',
-    '{"course":{"title":"","code":"","day":"","startTime":"","endTime":"","time":"","location":"","profName":"","profEmail":"","taName":"","taEmail":""},"events":[{"title":"","courseCode":"","date":"","time":"","priority":"low","type":"assignment","deadlineType":"assignment"}],"rawText":""}',
+    '{"course":{"title":"","code":"","day":"","startTime":"","endTime":"","time":"","location":"","profName":"","profEmail":"","taName":"","taEmail":""},"events":[{"title":"","courseCode":"","date":"","time":"","weight":null,"location":"","format":"","priority":"low","type":"assignment","deadlineType":"assignment"}],"rawText":""}',
   ].join('\n')
 }
 
@@ -142,9 +170,88 @@ function isDeadlineType(value: unknown): value is DeadlineType {
     value === 'other'
 }
 
-function normalizeParsedPayload(payload: Partial<ParsedSyllabusResponse>): ParsedSyllabusResponse {
+function normalizeNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.min(100, Math.round(value * 10) / 10))
+  if (typeof value !== 'string') return null
+  const parsed = Number(value.replace('%', '').trim())
+  if (!Number.isFinite(parsed)) return null
+  return Math.max(0, Math.min(100, Math.round(parsed * 10) / 10))
+}
+
+function isInstructionalOrCalendarNote(title: string) {
+  const normalized = title.toLowerCase()
+  return normalized.includes('exam review') ||
+    normalized.includes('reading week') ||
+    normalized.includes('course introduction') ||
+    normalized.includes('winter term begins') ||
+    normalized.includes('last day') ||
+    normalized.includes('university closed')
+}
+
+function eventIdentity(event: ParsedEvent) {
+  return [
+    event.courseCode.trim().toUpperCase(),
+    event.title.trim().toUpperCase(),
+    event.date,
+    event.time,
+    event.deadlineType,
+  ].join('::')
+}
+
+function cleanIdentityText(value = '') {
+  return value.trim().replace(/\s+/g, ' ').toUpperCase()
+}
+
+function isDuplicateAssessment(left: ParsedEvent, right: ParsedEvent) {
+  if (eventIdentity(left) === eventIdentity(right)) return true
+  const sameAssessment = cleanIdentityText(left.title) === cleanIdentityText(right.title) &&
+    cleanIdentityText(left.courseCode) === cleanIdentityText(right.courseCode) &&
+    left.type === right.type &&
+    left.deadlineType === right.deadlineType
+  const sameWeightedAssessment = sameAssessment &&
+    left.weight !== null &&
+    right.weight !== null &&
+    left.weight === right.weight
+  const sameExam = sameAssessment && left.type === 'exam'
+
+  return sameWeightedAssessment || sameExam
+}
+
+export function normalizeParsedPayload(payload: Partial<ParsedSyllabusResponse>): ParsedSyllabusResponse {
   const course: Partial<ParsedCourse> = payload.course || {}
   const events: Array<Partial<ParsedEvent>> = Array.isArray(payload.events) ? payload.events : []
+  const seen = new Set<string>()
+  const normalizedEvents: ParsedEvent[] = []
+
+  for (const event of events) {
+    const deadlineType = isDeadlineType(event.deadlineType)
+      ? event.deadlineType
+      : event.type === 'exam' ? 'exam' : 'assignment'
+    const type: EventType = deadlineType === 'exam' || deadlineType === 'quiz' || deadlineType === 'test'
+      ? 'exam'
+      : 'assignment'
+    const normalized: ParsedEvent = {
+      title: event.title || '',
+      courseCode: event.courseCode || course.code || '',
+      date: event.date || '',
+      time: event.time || '',
+      weight: normalizeNumber(event.weight),
+      location: event.location || '',
+      format: event.format || '',
+      priority: isPriority(event.priority) ? event.priority : event.type === 'exam' ? 'high' : 'low',
+      type,
+      deadlineType,
+    }
+
+    if (!normalized.title) continue
+    if (!normalized.date && normalized.weight === null) continue
+    if (isInstructionalOrCalendarNote(normalized.title)) continue
+
+    const identity = eventIdentity(normalized)
+    if (seen.has(identity) || normalizedEvents.some((candidate) => isDuplicateAssessment(candidate, normalized))) continue
+    seen.add(identity)
+    normalizedEvents.push(normalized)
+  }
 
   return {
     course: {
@@ -160,24 +267,7 @@ function normalizeParsedPayload(payload: Partial<ParsedSyllabusResponse>): Parse
       taName: course.taName || '',
       taEmail: course.taEmail || '',
     },
-    events: events.map((event): ParsedEvent => {
-      const deadlineType = isDeadlineType(event.deadlineType)
-        ? event.deadlineType
-        : event.type === 'exam' ? 'exam' : 'assignment'
-      const type: EventType = deadlineType === 'exam' || deadlineType === 'quiz' || deadlineType === 'test'
-        ? 'exam'
-        : 'assignment'
-
-      return {
-        title: event.title || '',
-        courseCode: event.courseCode || course.code || '',
-        date: event.date || '',
-        time: event.time || '',
-        priority: isPriority(event.priority) ? event.priority : event.type === 'exam' ? 'high' : 'low',
-        type,
-        deadlineType,
-      }
-    }).filter((event) => event.title && event.date),
+    events: normalizedEvents,
     rawText: typeof payload.rawText === 'string' ? payload.rawText : '',
     source: 'worker',
   }

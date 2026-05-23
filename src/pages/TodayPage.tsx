@@ -13,7 +13,13 @@ function todayLabel() {
 }
 
 function dateTime(date: string, time: string) {
+  if (!date) return time ? `TBD · ${time}` : 'TBD'
   return `${new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}${time ? ` · ${time}` : ''}`
+}
+
+function dayCount(date: string) {
+  if (!date) return 'TBD'
+  return Math.max(getDaysUntil(date), 0)
 }
 
 function timeToDecimal(time: string, fallback: number) {
@@ -58,6 +64,7 @@ export default function TodayPage() {
   const nextBlock = scheduleBlocks.find((block) => block.start > hour)
   const focusEvent = upcomingEvents[0]
   const focusDays = focusEvent ? getDaysUntil(focusEvent.date) : 0
+  const focusHasDate = focusEvent ? Number.isFinite(focusDays) : false
   const hasFocusContext = Boolean(focusEvent || current || nextBlock)
 
   const week = Array.from({ length: 7 }, (_, offset) => {
@@ -95,10 +102,10 @@ export default function TodayPage() {
             <div className="hero-exam-right">
               <span className="eyebrow">{focusEvent ? 'Due in' : 'Planner'}</span>
               <div className="countdown serif">
-                {focusEvent ? Math.max(focusDays, 0) : fmtHour(hour)}
-                {focusEvent && <small>{focusDays === 1 ? 'day' : 'days'}</small>}
+                {focusEvent ? dayCount(focusEvent.date) : fmtHour(hour)}
+                {focusEvent && focusHasDate && <small>{focusDays === 1 ? 'day' : 'days'}</small>}
               </div>
-              <div className="countdown-bar"><div style={{ width: `${focusEvent ? Math.max(8, 100 - Math.max(focusDays, 0) * 5) : 28}%` }} /></div>
+              <div className="countdown-bar"><div style={{ width: `${focusEvent ? focusHasDate ? Math.max(8, 100 - Math.max(focusDays, 0) * 5) : 18 : 28}%` }} /></div>
             </div>
           </section>
         </div>
@@ -112,7 +119,7 @@ export default function TodayPage() {
         </button>
         <button className="stat" onClick={() => navigate('/exams')}>
           <span className="eyebrow">Next exam</span>
-          <span className="stat-n serif">{nextExam ? getDaysUntil(nextExam.date) : '—'}<small>days</small></span>
+          <span className="stat-n serif">{nextExam ? dayCount(nextExam.date) : '—'}{nextExam?.date && <small>days</small>}</span>
           <span className="stat-sub">{nextExam ? `${nextExam.courseCode} · ${nextExam.title}` : 'No exams scheduled'}</span>
         </button>
         <button className="stat" onClick={() => navigate('/course-info')}>

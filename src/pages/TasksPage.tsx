@@ -10,6 +10,7 @@ function toDateId(date: Date) {
 }
 
 function relDay(date: string) {
+  if (!date) return 'Date needed'
   const days = getDaysUntil(date)
   if (days < 0) return days === -1 ? 'Yesterday' : `${Math.abs(days)}d ago`
   if (days === 0) return 'Today'

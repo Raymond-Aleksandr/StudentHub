@@ -59,6 +59,7 @@ export function formatDeadlineType(type: DeadlineType): string {
 }
 
 export function getDaysUntil(dateStr: string): number {
+  if (!dateStr) return Number.POSITIVE_INFINITY
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const target = new Date(`${dateStr}T00:00:00`)
@@ -66,6 +67,7 @@ export function getDaysUntil(dateStr: string): number {
 }
 
 export function formatCountdown(dateStr: string): string {
+  if (!dateStr) return 'TBD'
   const days = getDaysUntil(dateStr)
   if (days < 0) return 'Overdue'
   if (days === 0) return 'Today!'
@@ -74,6 +76,7 @@ export function formatCountdown(dateStr: string): string {
 }
 
 export function getUrgencyClass(dateStr: string): 'urgent' | 'warning' | 'calm' {
+  if (!dateStr) return 'calm'
   const days = getDaysUntil(dateStr)
   if (days <= 2) return 'urgent'
   if (days <= 7) return 'warning'
@@ -94,6 +97,7 @@ export function isSameCalendarEvent<T extends { title: string; courseCode?: stri
 }
 
 export function getEventTimestamp(event: { date: string; time: string }): number {
+  if (!event.date) return Number.MAX_SAFE_INTEGER
   return new Date(`${event.date}T${event.time || '23:59'}`).getTime()
 }
 

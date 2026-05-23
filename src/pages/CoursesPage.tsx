@@ -20,6 +20,11 @@ function CourseCodePills({ code, tag }: { code: string; tag: string }) {
   )
 }
 
+function daysUntilLabel(date: string) {
+  if (!date) return 'TBD'
+  return String(getDaysUntil(date))
+}
+
 export default function CoursesPage() {
   const { classes, taskEvents, examEvents, addCourse, updateCourse, removeCourse, toggleComplete, removeEvent, updateEvent } = usePlanner()
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -168,7 +173,7 @@ export default function CoursesPage() {
           </div>
           <div className="stat" style={{ cursor: 'default' }}>
             <span className="eyebrow">Next exam</span>
-            <span className="stat-n serif">{exams[0] ? getDaysUntil(exams[0].date) : '—'}{exams[0] && <small>d</small>}</span>
+            <span className="stat-n serif">{exams[0] ? daysUntilLabel(exams[0].date) : '—'}{exams[0]?.date && <small>d</small>}</span>
             <span className="stat-sub">{exams[0] ? `${exams[0].title}${exams[0].weight ? ` · ${exams[0].weight}%` : ''}` : 'None scheduled'}</span>
           </div>
         </div>
@@ -184,7 +189,7 @@ export default function CoursesPage() {
             <div>
               <span className="eyebrow">Scheduled exams</span>
               <strong className="serif">{exams.length}</strong>
-              <span className="mono">{exams[0] ? `${exams[0].title} in ${getDaysUntil(exams[0].date)}d` : 'none scheduled'}</span>
+              <span className="mono">{exams[0] ? exams[0].date ? `${exams[0].title} in ${getDaysUntil(exams[0].date)}d` : `${exams[0].title} needs a date` : 'none scheduled'}</span>
             </div>
             <div>
               <span className="eyebrow">Weighted items</span>
@@ -249,7 +254,7 @@ export default function CoursesPage() {
                     <span className="mono">{grade.source === 'computed' ? 'running' : 'estimate'}</span>
                   </div>
                   <div className="cc-stat">
-                    <span className="serif">{nextExam ? getDaysUntil(nextExam.date) : '—'}{nextExam && <small>d</small>}</span>
+                    <span className="serif">{nextExam ? daysUntilLabel(nextExam.date) : '—'}{nextExam?.date && <small>d</small>}</span>
                     <span className="mono">next exam</span>
                   </div>
                 </div>

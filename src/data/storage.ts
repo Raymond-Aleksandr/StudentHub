@@ -1,5 +1,6 @@
 import { normalizeDeadlineType } from '../domain/deadlines'
 import { normalizeCourseColor, normalizePercent, normalizeWeight } from '../domain/courseMeta'
+import { dedupeCalendarEvents } from '../domain/merge'
 import type { CalendarEvent, ClassInfo, SyllabusUpload } from '../domain/types'
 
 export type Unsubscribe = () => void
@@ -140,12 +141,12 @@ export function subscribeToCalendarEvents(
     const events = Array.isArray(data.events)
       ? data.events.map((event: Partial<CalendarEvent>) => normalizeCalendarEvent(event))
       : []
-    onChange(events)
+    onChange(dedupeCalendarEvents(events))
   })
 }
 
 export async function saveCalendarEvents(uid: string, events: CalendarEvent[]) {
-  writeJson(getStorageKey(uid, 'calendar'), { events: events.map(normalizeCalendarEvent) })
+  writeJson(getStorageKey(uid, 'calendar'), { events: dedupeCalendarEvents(events.map(normalizeCalendarEvent)) })
 }
 
 export function subscribeToClasses(

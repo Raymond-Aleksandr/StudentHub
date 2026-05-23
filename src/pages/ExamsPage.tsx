@@ -16,6 +16,7 @@ function dateTime(date: string, time: string) {
 function daysLabel(date: string) {
   if (!date) return 'TBD'
   const days = getDaysUntil(date)
+  if (days < 0) return days === -1 ? 'Yesterday' : `${Math.abs(days)}d ago`
   return `${Math.max(days, 0)}d`
 }
 
@@ -34,15 +35,19 @@ export default function ExamsPage() {
   const { classes, examEvents, addDraftEvent, updateEvent, removeEvent } = usePlanner()
   const [editing, setEditing] = useState<CalendarEvent | 'new' | null>(null)
   const sorted = [...examEvents].filter((event) => !event.completed).sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date))
-  const timelineEvents = sorted.filter((event) => event.date)
+  const overdueExams = sorted.filter((event) => event.date && getDaysUntil(event.date) < 0)
+  const upcomingExams = sorted.filter((event) => !event.date || getDaysUntil(event.date) >= 0)
+  const timelineEvents = sorted.filter((event) => event.date && getDaysUntil(event.date) >= 0)
   const undatedExams = sorted.filter((event) => !event.date)
   const hasUndatedExams = undatedExams.length > 0
-  const next = sorted[0]
+  const hasOverdueOnly = sorted.length > 0 && timelineEvents.length === 0 && overdueExams.length > 0 && !hasUndatedExams
+  const next = upcomingExams[0]
   const daysOut = next ? getDaysUntil(next.date) : 0
   const hasDate = next ? Number.isFinite(daysOut) : false
   const nextTitle = next ? examCardTitle(next) : ''
   const buckets = {
-    'This week': sorted.filter((event) => event.date && getDaysUntil(event.date) <= 7),
+    Overdue: overdueExams,
+    'This week': sorted.filter((event) => event.date && getDaysUntil(event.date) >= 0 && getDaysUntil(event.date) <= 7),
     'In two weeks': sorted.filter((event) => event.date && getDaysUntil(event.date) > 7 && getDaysUntil(event.date) <= 14),
     Later: sorted.filter((event) => event.date && getDaysUntil(event.date) > 14),
     'Date needed': undatedExams,
@@ -74,8 +79,8 @@ export default function ExamsPage() {
         </section>
       ) : (
         <section className="empty">
-          <h3>No exams yet</h3>
-          <p>Upload syllabi or add a quiz, test, or exam from Tasks.</p>
+          <h3>{sorted.length ? 'No upcoming exams' : 'No exams yet'}</h3>
+          <p>{sorted.length ? 'Overdue exams stay in the list below.' : 'Upload syllabi or add a quiz, test, or exam from Tasks.'}</p>
         </section>
       )}
 
@@ -128,13 +133,15 @@ export default function ExamsPage() {
             </div>
           </div>
           <div className="exam-empty-copy">
-            <span className="eyebrow">{hasUndatedExams ? 'Date needed' : 'Timeline is empty'}</span>
-            <h3>{hasUndatedExams ? 'Imported exams need official dates.' : 'Exams will appear here as soon as you add one.'}</h3>
-            <p>{hasUndatedExams ? 'Add the scheduled exam date to place it on the term timeline.' : 'Import a syllabus to extract assessment dates, or add a test manually.'}</p>
+            <span className="eyebrow">{hasUndatedExams ? 'Date needed' : hasOverdueOnly ? 'No upcoming dates' : 'Timeline is empty'}</span>
+            <h3>{hasUndatedExams ? 'Imported exams need official dates.' : hasOverdueOnly ? 'Overdue exams stay off the timeline.' : 'Exams will appear here as soon as you add one.'}</h3>
+            <p>{hasUndatedExams ? 'Add the scheduled exam date to place it on the term timeline.' : hasOverdueOnly ? 'The timeline only shows today and future exam dates.' : 'Import a syllabus to extract assessment dates, or add a test manually.'}</p>
           </div>
           <div className="exam-empty-actions">
             {hasUndatedExams ? (
               <button className="btn btn-accent" onClick={() => setEditing(undatedExams[0])}><Pencil size={15} /> Add date</button>
+            ) : hasOverdueOnly ? (
+              <button className="btn btn-accent" onClick={() => setEditing(overdueExams[0])}><Pencil size={15} /> Review exam</button>
             ) : (
               <>
                 <button className="btn btn-accent" onClick={() => setEditing('new')}><Plus size={15} /> Add exam</button>
@@ -161,7 +168,7 @@ export default function ExamsPage() {
                 <button key={`${event.title}-${event.date}`} className="exam-card card" style={{ '--tag': tagForEventCourse(classes, event.courseCode) } as CSSProperties} onClick={() => setEditing(event)}>
                   <div className="ec-top">
                     <span className="tag-pill" style={{ '--tag': tagForEventCourse(classes, event.courseCode) } as CSSProperties}>{event.courseCode || 'EXAM'}</span>
-                  <span className={`mono ec-days ${days <= 7 ? 'soon' : ''}`}>{daysLabel(event.date)}</span>
+                    <span className={`mono ec-days ${days >= 0 && days <= 7 ? 'soon' : ''}`}>{daysLabel(event.date)}</span>
                   </div>
                   <h3 className="serif">{titleText}</h3>
                   <div className="ec-date mono">{dateTime(event.date, event.time)}</div>

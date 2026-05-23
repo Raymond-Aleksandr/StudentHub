@@ -8,7 +8,7 @@ StudentHub is a mobile-first study planner for turning course syllabi into a usa
 - Extracts courses, deadlines, quizzes, tests, exams, and reminders.
 - Organizes the planner around Today, Import, Tasks, Exams, Courses, and Calendar views.
 - Stores planner data in the current browser with local profiles.
-- Offers a blank local profile for trying the app without starter data.
+- Offers a blank local profile for no-account use. Opening that profile starts it empty, then imports and edits persist in that browser profile.
 - Lets users add and edit courses, tasks, exams, calendar items, and imported syllabus metadata.
 - Stores assessment weights and earned scores so course running grades can be computed when scores are entered.
 - Assigns editable course colors that are reused across course cards, task rows, exam rows, and calendar lists.
@@ -27,6 +27,14 @@ GitHub Pages static app
 ```
 
 The static frontend can run without secrets. PDF syllabus import only works when the Cloudflare Worker is deployed and reachable. If the Worker is down, misconfigured, blocked by CORS, or missing `OPENROUTER_API_KEY`, the app reports an import error and does not fall back to browser PDF parsing.
+
+## Live Deployment
+
+- Frontend: `https://raymond-aleksandr.github.io/StudentHub/`
+- Default parser Worker: `https://studenthub-syllabus-parser.h-5c7.workers.dev/parse`
+- Deployment workflow: `.github/workflows/jekyll-gh-pages.yml`
+
+The frontend is a GitHub Pages project site. The Worker allow-list is origin-based, so the deployed Worker should allow `https://raymond-aleksandr.github.io` rather than a full `/StudentHub` path.
 
 ## Tech Stack
 
@@ -118,6 +126,14 @@ http://localhost:5173
 
 If Vite starts on another port, update `ALLOWED_ORIGINS` in `worker/.dev.vars`.
 
+Quick Worker health check:
+
+```bash
+curl http://127.0.0.1:8787/health
+```
+
+The Import page also shows whether the parser endpoint is online, blocked by CORS/config, or unreachable.
+
 ## Cloudflare Worker Parser
 
 The Worker lives in `worker/`. It accepts `POST /parse`, validates PDF uploads, calls OpenRouter with the PDF file, normalizes the response, and returns the planner data shape expected by the frontend.
@@ -145,6 +161,13 @@ If `VITE_SYLLABUS_PARSER_URL` is blank:
 
 For forks or real deployments, use your own Worker endpoint and update `ALLOWED_ORIGINS` in `worker/wrangler.jsonc`. The deployed Worker currently allow-lists browser origins, not full paths. Origin checks help protect browser usage, but they are not a complete abuse-control system. Add rate limiting, Turnstile, auth, or similar controls before exposing a high-traffic parser.
 
+Common parser failures:
+
+- `403` usually means the request origin is not listed in `ALLOWED_ORIGINS`.
+- `501` means the Worker is missing `OPENROUTER_API_KEY`.
+- `502` means OpenRouter or the PDF parser returned a bad response.
+- Timeouts usually mean the Worker, network, or model provider is unreachable.
+
 ## GitHub Pages Deployment
 
 GitHub Pages deployment is configured in:
@@ -169,14 +192,14 @@ SPA direct-route refreshes are handled by `public/404.html` and the redirect rep
 - Planner data is stored in `localStorage` under the current browser profile.
 - Local email/password profiles are browser-local only. They are not cloud accounts.
 - Passwords are hashed with Web Crypto before being stored locally, but this is still local browser auth, not production authentication.
-- The blank profile resets its planner data when opened.
+- The blank profile is browser-local no-account mode. Opening it from the login screen resets that blank profile to empty; after import, saved courses, events, and uploads persist normally until cleared or the blank profile is opened again.
 - The repository does not ship seeded courses, exams, tasks, private syllabi, or real student data.
 - Local testing data stays in the browser and should be cleared before screenshots, demos, or public issue reports if it came from a real syllabus.
-- Uploaded PDFs are sent to the configured Worker for parsing.
+- Uploaded PDFs are sent to the configured Worker, which forwards them to OpenRouter for parsing.
 - The Worker does not store uploaded PDFs.
 - Do not commit `.env.local`, `worker/.dev.vars`, API keys, service accounts, private syllabi, or test course files.
 
-To clear local planner data in a browser, use the app's blank profile or remove the `studenthub.*` keys from that browser's local storage.
+To clear the blank planner, open the blank profile from the login screen. To clear any local profile manually, remove the `studenthub.*` keys from that browser's local storage.
 
 ## Firebase
 
@@ -200,6 +223,7 @@ src/
   components/
     BottomNav.tsx            # Mobile bottom navigation
     EventCard.tsx            # Shared task/exam item and edit modal
+    useModalBodyLock.ts      # Modal scroll lock helper
   data/
     PlannerContext.tsx       # Planner state, derived data, actions
     storage.ts               # localStorage subscriptions and persistence
@@ -228,12 +252,13 @@ worker/
   README.md                  # Worker-specific setup notes
 public/
   404.html                   # GitHub Pages SPA redirect helper
+  favicon.svg                # Browser tab icon
 ```
 
 ## Planner Flow
 
-1. Open or create a local browser profile.
-2. Import one or more syllabus PDFs from the Import page.
+1. Open or create a local browser profile, or open the blank profile for no-account use.
+2. Import one or more syllabus PDFs from the Import page while the Worker parser is online.
 3. Review the import summary and imported syllabus list.
 4. Edit parsed courses, tasks, exams, and calendar items where needed.
 5. Use Today for the daily view, Tasks for the queue, Exams for assessments, Calendar for dates, and Courses for course-specific context.
@@ -247,6 +272,7 @@ Recommended final checks:
 npm run lint
 npm run build
 npm audit --omit=dev
+git diff --check
 git status --short
 ```
 
@@ -254,6 +280,7 @@ Also confirm:
 
 - `VITE_SYLLABUS_PARSER_URL` points to the Worker you want public users to hit, or you intentionally accept the default Worker in `src/syllabusParser.ts`.
 - `worker/wrangler.jsonc` has the correct `ALLOWED_ORIGINS` for the deployed frontend origin.
+- GitHub Pages is deploying from `main` and the Vite base path matches the repository name.
 - `OPENROUTER_API_KEY` is set as a Cloudflare Worker secret, not committed.
 - `worker/.dev.vars` is not committed.
 - Any private syllabi or test PDFs are outside the repo.

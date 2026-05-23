@@ -86,6 +86,20 @@ function applyTweaks(tweaks: ThemeTweaks) {
   document.documentElement.dataset.density = tweaks.density
 }
 
+function requestPageTop(behavior: ScrollBehavior = 'smooth') {
+  window.scrollTo({ top: 0, left: 0, behavior })
+}
+
+function navResetState() {
+  return { navResetAt: Date.now() }
+}
+
+function getNavResetKey(state: unknown) {
+  if (!state || typeof state !== 'object' || !('navResetAt' in state)) return 'base'
+  const resetAt = (state as { navResetAt?: unknown }).navResetAt
+  return typeof resetAt === 'number' ? String(resetAt) : 'base'
+}
+
 function getPlannerCopy(pathname: string) {
   const key = pathname.split('/').filter(Boolean)[0] as keyof typeof plannerViewCopy | undefined
   return plannerViewCopy[key ?? 'dashboard'] ?? plannerViewCopy.dashboard
@@ -114,6 +128,15 @@ function PlannerShell({
   const navigate = useNavigate()
   const copy = getPlannerCopy(location.pathname)
   const isDashboard = location.pathname === '/dashboard' || location.pathname === '/'
+  const openNavItem = (path: string) => {
+    if (location.pathname === path) {
+      requestPageTop()
+      void navigate(path, { replace: true, state: navResetState() })
+      return
+    }
+
+    void navigate(path)
+  }
 
   const handleLogout = async () => {
     await signOut(auth)
@@ -128,7 +151,7 @@ function PlannerShell({
         </div>
         <nav className="nav-stack">
           {navItems.map(({ label, path, icon: Icon }) => (
-            <button key={path} className={`nav-btn ${location.pathname === path ? 'active' : ''}`} onClick={() => navigate(path)} type="button">
+            <button key={path} className={`nav-btn ${location.pathname === path ? 'active' : ''}`} onClick={() => openNavItem(path)} type="button">
               <Icon size={18} />
               <span>{label}</span>
             </button>
@@ -295,19 +318,24 @@ function AuthenticatedRoutes({
   const showBottomNav = Boolean(user && !['/', '/login'].includes(location.pathname))
   const showPublicTweaks = ['/', '/login'].includes(location.pathname)
   const protectedProps = { user, tweaks, tweaksOpen, onToggleTweaks, onCloseTweaks, onSetTweak }
+  const pageResetKey = getNavResetKey(location.state)
+
+  useEffect(() => {
+    requestPageTop()
+  }, [location.pathname])
 
   return (
     <>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<ProtectedPlannerPage {...protectedProps}><TodayPage /></ProtectedPlannerPage>} />
-        <Route path="/import" element={<ProtectedPlannerPage {...protectedProps}><ImportPage /></ProtectedPlannerPage>} />
+        <Route path="/dashboard" element={<ProtectedPlannerPage {...protectedProps}><TodayPage key={pageResetKey} /></ProtectedPlannerPage>} />
+        <Route path="/import" element={<ProtectedPlannerPage {...protectedProps}><ImportPage key={pageResetKey} /></ProtectedPlannerPage>} />
         <Route path="/syllabus" element={<Navigate to="/import" replace />} />
-        <Route path="/tasks" element={<ProtectedPlannerPage {...protectedProps}><TasksPage /></ProtectedPlannerPage>} />
-        <Route path="/calendar" element={<ProtectedPlannerPage {...protectedProps}><CalendarPage /></ProtectedPlannerPage>} />
-        <Route path="/exams" element={<ProtectedPlannerPage {...protectedProps}><ExamsPage /></ProtectedPlannerPage>} />
-        <Route path="/course-info" element={<ProtectedPlannerPage {...protectedProps}><CoursesPage /></ProtectedPlannerPage>} />
+        <Route path="/tasks" element={<ProtectedPlannerPage {...protectedProps}><TasksPage key={pageResetKey} /></ProtectedPlannerPage>} />
+        <Route path="/calendar" element={<ProtectedPlannerPage {...protectedProps}><CalendarPage key={pageResetKey} /></ProtectedPlannerPage>} />
+        <Route path="/exams" element={<ProtectedPlannerPage {...protectedProps}><ExamsPage key={pageResetKey} /></ProtectedPlannerPage>} />
+        <Route path="/course-info" element={<ProtectedPlannerPage {...protectedProps}><CoursesPage key={pageResetKey} /></ProtectedPlannerPage>} />
         <Route path="/assignments" element={<Navigate to="/tasks" replace />} />
       </Routes>
       {showPublicTweaks && (

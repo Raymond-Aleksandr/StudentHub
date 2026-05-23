@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="StudentHub">
+  <rect width="64" height="64" rx="16" fill="#1a120f"/>
+  <path d="M18 20.5h28" stroke="#f7f3ec" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M18 31.5h22" stroke="#f7f3ec" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M18 42.5h16" stroke="#f7f3ec" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M45.5 29.5l4.5 4.5-12.5 12.5-5.6 1.1 1.1-5.6 12.5-12.5Z" fill="#e2552f"/>
+  <path d="M43.2 31.8l4.5 4.5" stroke="#f7f3ec" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

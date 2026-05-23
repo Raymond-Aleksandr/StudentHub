@@ -110,7 +110,7 @@ export default function CoursesPage() {
     const open = tasks.filter((event) => !event.completed)
     const done = tasks.filter((event) => event.completed)
     const exams = examEvents.filter((event) => event.courseCode === selected.code && !event.completed)
-    const progress = Math.min(0.9, Math.max(0.18, (done.length + 1) / Math.max(tasks.length + 3, 4)))
+    const taskCompletion = tasks.length ? Math.round((done.length / tasks.length) * 100) : null
 
     return (
       <>
@@ -137,14 +137,16 @@ export default function CoursesPage() {
 
         <div className="stats stats-4" style={{ marginTop: 22 }}>
           <div className="stat" style={{ cursor: 'default' }}>
-            <span className="eyebrow">Running grade</span>
-            <span className="stat-n serif">{Math.round(76 + progress * 20)}<small>%</small></span>
-            <span className="stat-sub">Editable estimate</span>
+            <span className="eyebrow">Tracked items</span>
+            <span className="stat-n serif">{tasks.length + exams.length}</span>
+            <span className="stat-sub">{tasks.length} tasks · {exams.length} exams</span>
           </div>
           <div className="stat" style={{ cursor: 'default' }}>
-            <span className="eyebrow">Term progress</span>
-            <span className="stat-n serif">{Math.round(progress * 100)}<small>%</small></span>
-            <div className="stat-bar"><div style={{ width: `${progress * 100}%`, background: tag }} /></div>
+            <span className="eyebrow">Tasks done</span>
+            <span className="stat-n serif">{taskCompletion ?? '—'}{taskCompletion !== null && <small>%</small>}</span>
+            {taskCompletion !== null
+              ? <div className="stat-bar"><div style={{ width: `${taskCompletion}%`, background: tag }} /></div>
+              : <span className="stat-sub">No tasks yet</span>}
           </div>
           <div className="stat" style={{ cursor: 'default' }}>
             <span className="eyebrow">Open tasks</span>
@@ -158,18 +160,24 @@ export default function CoursesPage() {
           </div>
         </div>
 
-        <div className="sec-head"><div><span className="eyebrow">Syllabus arc</span><h2>Weeks 1-14</h2></div></div>
+        <div className="sec-head"><div><span className="eyebrow">Course workload</span><h2>Upcoming assessments</h2></div></div>
         <section className="card card-tight">
-          <div className="arc">
-            {Array.from({ length: 14 }, (_, week) => {
-              const current = Math.floor(progress * 14)
-              return (
-                <div key={week} className={`arc-week ${week < current ? 'past' : ''} ${week === current ? 'cur' : ''}`}>
-                  <span className="mono">W{week + 1}</span>
-                  <div className="arc-bar" style={week <= current ? { background: tag, opacity: week === current ? 1 : 0.45 } : undefined} />
-                </div>
-              )
-            })}
+          <div className="course-workload">
+            <div>
+              <span className="eyebrow">Open tasks</span>
+              <strong className="serif">{open.length}</strong>
+              <span className="mono">{open.filter((event) => getDaysUntil(event.date) <= 7).length} due this week</span>
+            </div>
+            <div>
+              <span className="eyebrow">Scheduled exams</span>
+              <strong className="serif">{exams.length}</strong>
+              <span className="mono">{exams[0] ? `${exams[0].title} in ${getDaysUntil(exams[0].date)}d` : 'none scheduled'}</span>
+            </div>
+            <div>
+              <span className="eyebrow">Completed</span>
+              <strong className="serif">{done.length}</strong>
+              <span className="mono">{tasks.length ? `${tasks.length} total tasks` : 'no task history'}</span>
+            </div>
           </div>
         </section>
 
@@ -197,7 +205,7 @@ export default function CoursesPage() {
           const open = tasks.filter((event) => !event.completed).length
           const done = tasks.filter((event) => event.completed).length
           const nextExam = examEvents.filter((event) => event.courseCode === course.code && !event.completed)[0]
-          const progress = Math.min(0.9, Math.max(0.18, (done + 1) / Math.max(tasks.length + 3, 4)))
+          const taskCompletion = tasks.length ? Math.round((done / tasks.length) * 100) : null
 
           return (
             <article key={course.id} className="course-card card" style={{ '--tag': tag } as CSSProperties}>
@@ -205,24 +213,26 @@ export default function CoursesPage() {
                 <div className="cc-stripe" />
                 <div className="cc-top">
                   <span className="tag-pill" style={{ '--tag': tag } as CSSProperties}>{course.code || 'Course'}</span>
-                  <span className="mono cc-grade">{Math.round(76 + progress * 20)}<small>%</small></span>
+                  <span className="mono cc-count">{tasks.length + (nextExam ? 1 : 0)} items</span>
                 </div>
                 <h3 className="serif">{course.title || 'Untitled course'}</h3>
                 <div className="cc-meta">
                   <span><Clock size={12} /> {[course.day, course.time || course.startTime].filter(Boolean).join(' · ') || 'No schedule set'}</span>
                   <span><MapPin size={12} /> {course.location || 'No room set'}</span>
                 </div>
-                <div className="cc-progress">
-                  <div className="cc-progress-bar"><div style={{ width: `${progress * 100}%` }} /></div>
-                  <span className="mono">{Math.round(progress * 100)}% term</span>
-                </div>
+                {taskCompletion !== null && (
+                  <div className="cc-progress">
+                    <div className="cc-progress-bar"><div style={{ width: `${taskCompletion}%` }} /></div>
+                    <span className="mono">{taskCompletion}% tasks done</span>
+                  </div>
+                )}
                 <div className="cc-foot">
                   <div className="cc-stat">
                     <span className="serif">{open}</span>
                     <span className="mono">open tasks</span>
                   </div>
                   <div className="cc-stat">
-                    <span className="serif">{tasks.length ? Math.round((done / tasks.length) * 100) : 0}<small>%</small></span>
+                    <span className="serif">{taskCompletion ?? '—'}{taskCompletion !== null && <small>%</small>}</span>
                     <span className="mono">tasks done</span>
                   </div>
                   <div className="cc-stat">

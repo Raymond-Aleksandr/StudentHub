@@ -53,8 +53,8 @@ const features = [
     visual: 'timeline',
   },
   {
-    title: 'Quick capture',
-    body: 'Type "math240 pset 6 fri" and get a structured task with course code, type, and due date.',
+    title: 'Structured editing',
+    body: 'Add or correct tasks with clear fields for course code, due date, time, and assessment type.',
     visual: 'capture',
   },
   {
@@ -397,7 +397,7 @@ function FeatureVisual({ type }: { type: string }) {
     return <div className="landing-vis landing-vis-timeline"><i /><span><b /><b /><b /></span></div>
   }
   if (type === 'capture') {
-    return <div className="landing-vis landing-vis-capture"><code>›</code><code>math240</code><code>pset 6</code><code>fri</code></div>
+    return <div className="landing-vis landing-vis-capture"><code>Course</code><code>Date</code><code>Type</code><code>Save</code></div>
   }
   if (type === 'pressure') {
     return <div className="landing-vis landing-vis-pressure"><i /><i /><i /><i /><i /><i /><i /></div>

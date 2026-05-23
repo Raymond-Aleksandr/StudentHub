@@ -50,6 +50,7 @@ export default function TodayPage() {
 
   const current = scheduleBlocks.find((block) => hour >= block.start && hour < block.end)
   const nextBlock = scheduleBlocks.find((block) => block.start > hour)
+  const hasNowContext = Boolean(current || nextBlock || upcomingEvents[0])
 
   const week = Array.from({ length: 7 }, (_, offset) => {
     const date = new Date()
@@ -63,24 +64,30 @@ export default function TodayPage() {
 
   return (
     <>
-      <div className="now-strip">
-        <section className="now-card">
-          <div className="now-top">
-            <span className="now-pulse" />
-            <span className="eyebrow">Now · {fmtHour(hour)}</span>
-          </div>
-          <div className="now-title">{current ? current.title : 'Free block'}</div>
-          <div className="now-meta">
-            {current ? `${current.location || 'Campus'} · ends ${fmtHour(current.end)}` : nextBlock ? `${nextBlock.title} at ${fmtHour(nextBlock.start)}` : todayLabel()}
-          </div>
-        </section>
+      {hasNowContext && (
+        <div className="now-strip">
+          {(current || nextBlock) && (
+            <section className="now-card">
+              <div className="now-top">
+                <span className="now-pulse" />
+                <span className="eyebrow">{current ? `Now · ${fmtHour(hour)}` : 'Next class'}</span>
+              </div>
+              <div className="now-title">{current ? current.title : nextBlock?.title}</div>
+              <div className="now-meta">
+                {current ? `${current.location || 'Campus'} · ends ${fmtHour(current.end)}` : nextBlock ? `${fmtHour(nextBlock.start)} · ${nextBlock.location || todayLabel()}` : todayLabel()}
+              </div>
+            </section>
+          )}
 
-        <section className="next-card">
-          <span className="eyebrow">Up next</span>
-          <div className="next-title">{upcomingEvents[0]?.title ?? nextBlock?.title ?? 'Nothing urgent'}</div>
-          <div className="next-time mono">{upcomingEvents[0] ? `${upcomingEvents[0].courseCode || 'Unassigned'} · ${formatCountdown(upcomingEvents[0].date)}` : 'Use the space well'}</div>
-        </section>
-      </div>
+          {upcomingEvents[0] && (
+            <section className="next-card">
+              <span className="eyebrow">Up next</span>
+              <div className="next-title">{upcomingEvents[0].title}</div>
+              <div className="next-time mono">{`${upcomingEvents[0].courseCode || 'Unassigned'} · ${formatCountdown(upcomingEvents[0].date)}`}</div>
+            </section>
+          )}
+        </div>
+      )}
 
       <section className="stats">
         <button className="stat" onClick={() => navigate('/tasks')}>

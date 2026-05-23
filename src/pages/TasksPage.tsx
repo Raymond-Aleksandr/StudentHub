@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { usePlanner } from '../data/usePlanner'
-import { EventCard } from '../components/EventCard'
+import { EventCard, EventEditModal } from '../components/EventCard'
 import type { DraftEvent } from '../domain/types'
-import { formatDeadlineType, getDaysUntil, getEventDeadlineType } from '../domain/deadlines'
+import { getDaysUntil, getEventDeadlineType } from '../domain/deadlines'
 
 function toDateId(date: Date) {
   return date.toISOString().slice(0, 10)
@@ -18,50 +18,11 @@ function relDay(date: string) {
   return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-function parseQuick(text: string): DraftEvent | null {
-  if (!text.trim()) return null
-  const lower = text.toLowerCase()
-  const codeMatch = text.match(/\b[A-Za-z]{2,5}\s?\d{2,4}\b/)
-  const courseCode = codeMatch?.[0].replace(/([A-Za-z]+)\s?(\d+)/, (_, a, b) => `${a.toUpperCase()} ${b}`) ?? ''
-  const date = new Date()
-  const dowMap: Record<string, number> = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 }
-  let foundDate = false
-  for (const [key, dow] of Object.entries(dowMap)) {
-    if (lower.includes(key)) {
-      const add = (dow - date.getDay() + 7) % 7 || 7
-      date.setDate(date.getDate() + add)
-      foundDate = true
-      break
-    }
-  }
-  if (!foundDate && lower.includes('tomorrow')) {
-    date.setDate(date.getDate() + 1)
-    foundDate = true
-  }
-  if (!foundDate && lower.includes('today')) foundDate = true
-  if (!foundDate) date.setDate(date.getDate() + 3)
-
-  const deadlineType = /quiz/.test(lower) ? 'quiz'
-    : /test|exam/.test(lower) ? 'test'
-    : /lab/.test(lower) ? 'lab-report'
-    : /project/.test(lower) ? 'project'
-    : /presentation/.test(lower) ? 'presentation'
-    : 'assignment'
-
-  const title = text
-    .replace(codeMatch?.[0] ?? '', '')
-    .replace(/\b(mon|tue|wed|thu|fri|sat|sun|today|tomorrow)\b/ig, '')
-    .trim() || 'Untitled task'
-
-  return { title, courseCode, date: toDateId(date), time: '23:59', deadlineType }
-}
-
 export default function TasksPage() {
   const { taskEvents, toggleComplete, removeEvent, updateEvent, addDraftEvent } = usePlanner()
-  const [quick, setQuick] = useState('')
+  const [adding, setAdding] = useState(false)
   const [filter, setFilter] = useState<'open' | 'overdue' | 'done' | 'all'>('open')
   const [courseFilter, setCourseFilter] = useState('all')
-  const parsed = parseQuick(quick)
   const courseOptions = useMemo(() => Array.from(new Set(taskEvents.map((event) => event.courseCode).filter(Boolean))).sort(), [taskEvents])
 
   const view = taskEvents
@@ -80,35 +41,17 @@ export default function TasksPage() {
     return groups
   }, {})
 
-  const addQuick = async () => {
-    if (!parsed) return
-    await addDraftEvent(parsed)
-    setQuick('')
-  }
-
   return (
     <>
-      <section className="quick-capture card">
-        <div className="qc-head">
-          <span className="eyebrow">Quick capture</span>
-          <span className="mono">try &quot;math240 pset 7 fri&quot;</span>
+      <div className="sec-head tasks-head">
+        <div>
+          <span className="eyebrow">Task queue</span>
+          <h2>{taskEvents.filter((event) => !event.completed).length} open</h2>
         </div>
-        <div className="field qc-field">
-          <span className="mono" style={{ color: 'var(--accent)' }}>›</span>
-          <input value={quick} onChange={(event) => setQuick(event.target.value)} placeholder="Type a task... we'll parse the course code and due date" onKeyDown={(event) => { if (event.key === 'Enter') void addQuick() }} />
-          <button className="btn btn-accent" onClick={() => void addQuick()} disabled={!parsed}>
-            <Plus size={14} /> Add
-          </button>
-        </div>
-        {parsed && (
-          <div className="qc-parsed">
-            <span className="qc-chip"><span className="mono">course</span>{parsed.courseCode || 'Unassigned'}</span>
-            <span className="qc-chip"><span className="mono">type</span>{formatDeadlineType(parsed.deadlineType)}</span>
-            <span className="qc-chip"><span className="mono">due</span>{relDay(parsed.date)}</span>
-            <span className="qc-chip"><span className="mono">title</span>{parsed.title}</span>
-          </div>
-        )}
-      </section>
+        <button className="btn btn-accent" onClick={() => setAdding(true)}>
+          <Plus size={14} /> New task
+        </button>
+      </div>
 
       <div className="filter-row">
         <div className="seg">
@@ -142,6 +85,29 @@ export default function TasksPage() {
           </div>
         )}
       </section>
+      {adding && (
+        <EventEditModal
+          title="New task"
+          initialDraft={newTaskDraft()}
+          onClose={() => setAdding(false)}
+          onSave={(draft) => {
+            void addDraftEvent(draft)
+            setAdding(false)
+          }}
+        />
+      )}
     </>
   )
+}
+
+function newTaskDraft(): DraftEvent {
+  const date = new Date()
+  date.setDate(date.getDate() + 3)
+  return {
+    title: '',
+    courseCode: '',
+    date: toDateId(date),
+    time: '23:59',
+    deadlineType: 'assignment',
+  }
 }

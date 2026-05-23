@@ -1,9 +1,16 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Check, Pencil, Sparkles, Trash2, X } from 'lucide-react'
 import { usePlanner } from '../data/usePlanner'
 import { deadlineTypeToEventType, getEventDeadlineType } from '../domain/deadlines'
 import type { SyllabusUpload } from '../domain/types'
+import { getSyllabusParserEndpoint } from '../syllabusParser'
+
+type ParserStatus = {
+  tone: 'checking' | 'online' | 'blocked' | 'offline'
+  label: string
+  detail: string
+}
 
 function getUploadCounts(upload: SyllabusUpload) {
   const events = upload.parsedEvents ?? []
@@ -16,7 +23,64 @@ export default function ImportPage() {
   const [drag, setDrag] = useState(false)
   const [editingUpload, setEditingUpload] = useState<SyllabusUpload | null>(null)
   const [uploadDraft, setUploadDraft] = useState<SyllabusUpload | null>(null)
+  const [parserStatus, setParserStatus] = useState<ParserStatus>({
+    tone: 'checking',
+    label: 'Checking',
+    detail: 'testing parser endpoint',
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const parserEndpoint = useMemo(() => getSyllabusParserEndpoint(), [])
+  const parserHost = useMemo(() => {
+    try {
+      const url = new URL(parserEndpoint)
+      return url.hostname === '127.0.0.1' ? 'localhost Worker' : url.hostname
+    } catch {
+      return 'configured endpoint'
+    }
+  }, [parserEndpoint])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function checkParser() {
+      setParserStatus({
+        tone: 'checking',
+        label: 'Checking',
+        detail: parserHost,
+      })
+
+      try {
+        const response = await fetch(parserEndpoint, {
+          method: 'OPTIONS',
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        if (response.ok || response.status === 204) {
+          setParserStatus({
+            tone: 'online',
+            label: 'Online',
+            detail: `${parserHost} accepts this origin`,
+          })
+          return
+        }
+        setParserStatus({
+          tone: 'blocked',
+          label: 'Blocked',
+          detail: `origin rejected by ${parserHost}`,
+        })
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setParserStatus({
+          tone: 'offline',
+          label: 'Offline',
+          detail: `cannot reach ${parserHost}`,
+        })
+      }
+    }
+
+    void checkParser()
+    return () => controller.abort()
+  }, [parserEndpoint, parserHost])
 
   const startEdit = (upload: SyllabusUpload) => {
     setEditingUpload(upload)
@@ -61,10 +125,13 @@ export default function ImportPage() {
       <div className={`planner-status ${importState.tone}`}>{importState.message}</div>
 
       <section className="worker-row">
-        <div className="card card-tight worker-card">
-          <span className="eyebrow">Worker</span>
-          <div className="worker-val">required</div>
-          <div className="worker-sub mono">parser endpoint only</div>
+        <div className="card card-tight worker-card" data-status={parserStatus.tone}>
+          <div className="worker-card-head">
+            <span className="eyebrow">Parser</span>
+            <span className="worker-live-dot" />
+          </div>
+          <div className="worker-val">{parserStatus.label}</div>
+          <div className="worker-sub mono">{parserStatus.detail}</div>
         </div>
         <div className="card card-tight worker-card">
           <span className="eyebrow">Parsed this term</span>

@@ -22,7 +22,7 @@ function normalizeWorkerResponse(data: Partial<ParsedSyllabusData>): ParsedSylla
   }
 }
 
-function getWorkerEndpoint(): string {
+export function getSyllabusParserEndpoint(): string {
   const configuredEndpoint = import.meta.env.VITE_SYLLABUS_PARSER_URL?.trim()
   if (configuredEndpoint) return configuredEndpoint
 
@@ -36,7 +36,7 @@ function getWorkerEndpoint(): string {
 }
 
 export async function parseSyllabusPdf(file: File): Promise<ParsedSyllabusData> {
-  const endpoint = getWorkerEndpoint()
+  const endpoint = getSyllabusParserEndpoint()
 
   const formData = new FormData()
   formData.append('file', file)

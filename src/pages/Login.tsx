@@ -1,16 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarCheck,
-  Eye,
-  EyeOff,
-  FileUp,
-  Lock,
-  Mail,
-  ShieldCheck,
-} from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { auth, createUserWithEmailAndPassword, signInAsDemoUser, signInWithEmailAndPassword } from '../localAuth'
 import './Login.css'
 
@@ -26,10 +16,12 @@ function Login() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
+
     if (!email || !password) {
       setError('Please fill in both fields.')
       return
     }
+
     if (password.length < 6) {
       setError('Password must be at least 6 characters.')
       return
@@ -48,7 +40,7 @@ function Login() {
     }
   }
 
-  const handleDemo = async () => {
+  const handleBlankProfile = async () => {
     setError('')
     setIsLoading(true)
     try {
@@ -56,121 +48,157 @@ function Login() {
       navigate('/dashboard')
     } catch (err: unknown) {
       const nextError = err as { message?: string }
-      setError(nextError.message || 'Could not start the demo profile.')
+      setError(nextError.message || 'Could not start the blank profile.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const switchMode = () => {
-    setIsSignUp((current) => !current)
+  const setMode = (signUp: boolean) => {
+    setIsSignUp(signUp)
     setError('')
   }
 
   return (
-    <main className="login-page">
-      <button className="login-back" onClick={() => navigate('/')} aria-label="Back to home">
-        <ArrowLeft size={18} />
-        Home
-      </button>
+    <main className="signin-page">
+      <header className="signin-top">
+        <button className="signin-brand" onClick={() => navigate('/')}>
+          <span>SH</span>
+          StudentHub
+        </button>
+        <button className="signin-back" onClick={() => navigate('/')}>
+          <ArrowLeft size={14} />
+          Home
+        </button>
+      </header>
 
-      <section className="login-panel" aria-label="StudentHub sign in">
-        <div className="login-card">
-          <div className="login-brand">
-            <span>SH</span>
-            <strong>StudentHub</strong>
-          </div>
-          <div className="login-copy">
-            <span className="login-eyebrow">Private browser profile</span>
-            <h1>{isSignUp ? 'Create your planner.' : 'Open your planner.'}</h1>
-            <p>
-              Use a local account for this browser, or jump into the demo profile to test syllabus imports and task planning.
+      <div className="signin-layout">
+        <section className="signin-form-side">
+          <div className="signin-form-card">
+            <span className="eyebrow">Private browser profile</span>
+            <h1>
+              {isSignUp ? 'Create your ' : 'Open your '}
+              <em>planner.</em>
+            </h1>
+            <p className="signin-lede">
+              A local account for this browser, or jump into a blank local profile to test syllabus
+              parsing and term planning without sample data.
             </p>
-          </div>
 
-          <form className="login-form" onSubmit={handleSubmit}>
-            {error && <div className="login-error">{error}</div>}
+            <div className="signin-tabs" role="tablist" aria-label="Sign in mode">
+              <button
+                className={!isSignUp ? 'active' : ''}
+                onClick={() => setMode(false)}
+                role="tab"
+                aria-selected={!isSignUp}
+                type="button"
+              >
+                Sign in
+              </button>
+              <button
+                className={isSignUp ? 'active' : ''}
+                onClick={() => setMode(true)}
+                role="tab"
+                aria-selected={isSignUp}
+                type="button"
+              >
+                Create
+              </button>
+            </div>
 
-            <label className="login-field">
-              <span>Email</span>
-              <div>
-                <Mail size={18} />
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  disabled={isLoading}
-                />
-              </div>
-            </label>
+            <form className="signin-form" onSubmit={handleSubmit}>
+              {error && <div className="signin-error">{error}</div>}
 
-            <label className="login-field">
-              <span>Password</span>
-              <div>
-                <Lock size={18} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="At least 6 characters"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  disabled={isLoading}
-                />
-                <button type="button" className="login-eye" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              <label className="signin-field-group">
+                <span className="signin-label">Email</span>
+                <span className="field">
+                  <Mail className="ico" size={16} />
+                  <input
+                    type="email"
+                    placeholder="you@school.edu"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    disabled={isLoading}
+                  />
+                </span>
+              </label>
+
+              <label className="signin-field-group">
+                <span className="signin-label">Password</span>
+                <span className="field">
+                  <Lock className="ico" size={16} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="At least 6 characters"
+                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    disabled={isLoading}
+                  />
+                  <button
+                    className="signin-reveal"
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </span>
+              </label>
+
+              <div className="signin-row-actions">
+                <button className="btn btn-accent signin-btn-full" type="submit" disabled={isLoading}>
+                  {isLoading ? 'Working...' : isSignUp ? 'Create account' : 'Sign in'}
+                  <ArrowRight size={16} />
                 </button>
               </div>
-            </label>
+            </form>
 
-            <button className="login-primary" type="submit" disabled={isLoading}>
-              {isLoading ? 'Working...' : isSignUp ? 'Create account' : 'Sign in'}
-              <ArrowRight size={18} />
-            </button>
-          </form>
+            <div className="signin-divider">or</div>
 
-          <div className="login-divider"><span>or</span></div>
-
-          <button className="login-demo" onClick={handleDemo} disabled={isLoading}>
-            <CalendarCheck size={18} />
-            Demo profile
-          </button>
-
-          <p className="login-switch">
-            {isSignUp ? 'Already have a local account?' : 'Need a local account?'}
-            <button type="button" onClick={switchMode}>
-              {isSignUp ? 'Sign in' : 'Create one'}
-            </button>
-          </p>
-        </div>
-
-        <aside className="login-preview" aria-label="Planner preview">
-          <div className="login-preview-phone">
-            <div className="login-preview-top">
-              <span>Import</span>
-              <FileUp size={18} />
+            <div className="signin-demo">
+              <div>
+                <b>Blank profile</b>
+                <span>No sample courses · ready for your syllabi</span>
+              </div>
+              <button className="btn btn-soft" onClick={handleBlankProfile} disabled={isLoading}>
+                Open <ArrowRight size={14} />
+              </button>
             </div>
-            <div className="login-preview-drop">
-              <FileUp size={24} />
-              <strong>Syllabus parsed</strong>
-              <small>8 dates added</small>
+
+            <p className="signin-foot-note">
+              {isSignUp ? 'Already have a local account?' : 'Need a local account?'}
+              <button type="button" onClick={() => setMode(!isSignUp)}>
+                {isSignUp ? 'Sign in' : 'Create one'}
+              </button>
+            </p>
+          </div>
+        </section>
+
+        <aside className="signin-aside">
+          <div>
+            <span className="eyebrow">Why an account at all?</span>
+            <p className="signin-quote">
+              "Sync your courses to whatever device is in your hand at 2am the night before."
+            </p>
+          </div>
+          <div className="signin-aside-foot">
+            <div className="signin-who">
+              <div className="signin-avatar">SH</div>
+              <div>
+                <div className="signin-who-title">Optional, always</div>
+                <div className="signin-terms">Bring-your-own Firebase · zero lock-in</div>
+              </div>
             </div>
-            <div className="login-preview-item">
-              <span>BIO210</span>
-              <strong>Assignment</strong>
-              <small>Tomorrow</small>
-            </div>
-            <div className="login-preview-item">
-              <span>HIST330</span>
-              <strong>Team formation</strong>
-              <small>Next week</small>
-            </div>
-            <div className="login-preview-safe">
-              <ShieldCheck size={17} />
-              <span>No frontend secrets</span>
+            <div className="signin-mini" aria-hidden="true">
+              <div>MO</div><div>TU</div><div>WE</div>
+              <div>TH</div><div className="dot">●</div><div>SA</div>
+              <div>SU</div><div>MO</div><div>TU</div>
             </div>
           </div>
         </aside>
-      </section>
+      </div>
     </main>
   )
 }

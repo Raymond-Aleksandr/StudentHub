@@ -23,6 +23,10 @@ function writeJson(key: string, value: unknown) {
   subscribers.get(key)?.forEach((listener) => listener())
 }
 
+function isBlankProfile(uid: string) {
+  return uid === 'local:demo'
+}
+
 function subscribeToKey(key: string, listener: () => void): Unsubscribe {
   const keySubscribers = subscribers.get(key) ?? new Set<() => void>()
   keySubscribers.add(listener)
@@ -125,7 +129,14 @@ export function subscribeToCalendarEvents(
     const events = Array.isArray(data.events)
       ? data.events.map((event: Partial<CalendarEvent>) => normalizeCalendarEvent(event))
       : []
-    onChange(events)
+    const visibleEvents = isBlankProfile(uid)
+      ? events.filter((event) => !event.sourceUploadId.startsWith('demo-'))
+      : events
+    if (visibleEvents.length !== events.length) {
+      writeJson(key, { events: visibleEvents })
+      return
+    }
+    onChange(visibleEvents)
   })
 }
 
@@ -143,7 +154,14 @@ export function subscribeToClasses(
     const classes = Array.isArray(data.classes)
       ? data.classes.map((course: Partial<ClassInfo>, index: number) => normalizeClass(course, index))
       : []
-    onChange(classes)
+    const visibleClasses = isBlankProfile(uid)
+      ? classes.filter((course) => !course.sourceUploadId.startsWith('demo-'))
+      : classes
+    if (visibleClasses.length !== classes.length) {
+      writeJson(key, { classes: visibleClasses })
+      return
+    }
+    onChange(visibleClasses)
   })
 }
 
@@ -161,7 +179,14 @@ export function subscribeToSyllabusUploads(
     const uploads = Array.isArray(data.uploads)
       ? data.uploads.map((upload: Partial<SyllabusUpload>) => normalizeUpload(upload))
       : []
-    onChange(uploads)
+    const visibleUploads = isBlankProfile(uid)
+      ? uploads.filter((upload) => !upload.id.startsWith('demo-'))
+      : uploads
+    if (visibleUploads.length !== uploads.length) {
+      writeJson(key, { uploads: visibleUploads })
+      return
+    }
+    onChange(visibleUploads)
   })
 }
 

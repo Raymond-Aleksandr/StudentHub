@@ -114,7 +114,14 @@ export async function signOut(_auth: typeof auth) {
 export async function signInAsDemoUser(_auth: typeof auth) {
   void _auth
   auth.currentUser = { uid: 'local:demo', email: 'demo@studenthub.local' }
+  resetDemoPlanner(auth.currentUser.uid)
   writeJson(currentUserKey, auth.currentUser)
   notifyAuthListeners()
   return { user: auth.currentUser }
+}
+
+function resetDemoPlanner(uid: string) {
+  writeJson(`studenthub.${uid}.classes`, { classes: [] })
+  writeJson(`studenthub.${uid}.calendar`, { events: [] })
+  writeJson(`studenthub.${uid}.syllabi`, { uploads: [] })
 }

@@ -30,12 +30,13 @@ interface PlannerActions {
   addDraftEvent: (draft: DraftEvent) => Promise<void>
   updateEvent: (target: CalendarEvent, draft: DraftEvent) => Promise<void>
   // Courses
-  addCourse: () => Promise<void>
+  addCourse: (draft?: Partial<ClassInfo>) => Promise<number | undefined>
   updateCourse: (id: number, field: keyof ClassInfo, value: string) => Promise<void>
   removeCourse: (id: number) => Promise<void>
   // Uploads
   importFiles: (files: FileList) => Promise<void>
   removeUpload: (upload: SyllabusUpload) => Promise<void>
+  updateUpload: (target: SyllabusUpload, draft: SyllabusUpload) => Promise<void>
 }
 
 interface PlannerDerived {
@@ -179,16 +180,19 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     await persistEvents(sortEventsByDate(nextEvents))
   }
 
-  const addCourse = async () => {
+  const addCourse = async (draft?: Partial<ClassInfo>) => {
+    const id = nextCourseId(classes)
     await persistClasses([
       ...classes,
       {
-        id: nextCourseId(classes),
+        id,
         title: '', code: '', day: '', startTime: '', endTime: '',
         time: '', location: '', profName: '', profEmail: '',
         taName: '', taEmail: '', sourceUploadId: '',
+        ...draft,
       },
     ])
+    return id
   }
 
   const updateCourse = async (id: number, field: keyof ClassInfo, value: string) => {
@@ -284,11 +288,20 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setImportState({ tone: 'done', message: `${upload.name} and its imported items were removed.` })
   }
 
+  const updateUpload = async (target: SyllabusUpload, draft: SyllabusUpload) => {
+    const uid = auth.currentUser?.uid
+    if (!uid) return
+    const nextUploads = uploads.map((upload) => upload.id === target.id ? draft : upload)
+    setUploads(nextUploads)
+    await saveSyllabusUploads(uid, nextUploads)
+    setImportState({ tone: 'done', message: `${draft.name} was updated.` })
+  }
+
   const value: PlannerContextValue = {
     classes, events, uploads, importState,
     toggleComplete, removeEvent, addDraftEvent, updateEvent,
     addCourse, updateCourse, removeCourse,
-    importFiles, removeUpload,
+    importFiles, removeUpload, updateUpload,
     upcomingEvents, reminders, todayClasses, taskEvents, examEvents, stats,
   }
 

@@ -4,7 +4,7 @@ import './BottomNav.css'
 
 const items = [
   { label: 'Today', path: '/dashboard', icon: Home },
-  { label: 'Import', path: '/syllabus', icon: FileUp },
+  { label: 'Import', path: '/import', icon: FileUp },
   { label: 'Tasks', path: '/tasks', icon: ListChecks },
   { label: 'Exams', path: '/exams', icon: GraduationCap },
   { label: 'Courses', path: '/course-info', icon: BookOpen },

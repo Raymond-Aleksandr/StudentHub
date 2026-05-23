@@ -11,7 +11,7 @@ import {
 import type { CalendarEvent, ClassInfo, SyllabusUpload, DraftEvent, ImportState } from '../domain/types'
 import { deadlineTypeToEventType, formatCountdown, getDaysUntil, getEventDeadlineType, isSameCalendarEvent, sortEventsByDate } from '../domain/deadlines'
 import { mergeCourse, mergeEvents, normalizeCourse, normalizeEvents, nextCourseId } from '../domain/merge'
-import { normalizePercent, normalizeWeight } from '../domain/courseMeta'
+import { normalizeDurationMinutes, normalizePercent, normalizeWeight } from '../domain/courseMeta'
 import { WEEKDAYS } from '../domain/calendar'
 import { parseSyllabusPdf } from '../syllabusParser'
 
@@ -151,6 +151,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       courseCode: draft.courseCode,
       date: draft.date,
       time: draft.time,
+      durationMinutes: type === 'exam' ? normalizeDurationMinutes(draft.durationMinutes) ?? 120 : null,
       weight: normalizeWeight(draft.weight),
       score: normalizePercent(draft.score),
       location: draft.location.trim(),
@@ -176,6 +177,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         courseCode: draft.courseCode,
         date: draft.date,
         time: draft.time,
+        durationMinutes: type === 'exam' ? normalizeDurationMinutes(draft.durationMinutes) ?? 120 : null,
         weight: normalizeWeight(draft.weight),
         score: normalizePercent(draft.score),
         location: draft.location.trim(),

@@ -7,6 +7,7 @@ export interface CalendarEvent {
   courseCode: string
   date: string
   time: string
+  durationMinutes: number | null
   weight: number | null
   score: number | null
   location: string
@@ -65,6 +66,7 @@ export interface SyllabusUpload {
     courseCode: string
     date: string
     time: string
+    durationMinutes?: number | null
     weight: number | null
     score: number | null
     location: string
@@ -82,6 +84,7 @@ export interface DraftEvent {
   courseCode: string
   date: string
   time: string
+  durationMinutes: number | null
   weight: number | null
   score: number | null
   location: string

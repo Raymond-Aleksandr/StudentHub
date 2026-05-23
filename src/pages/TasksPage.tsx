@@ -109,6 +109,7 @@ function newTaskDraft(): DraftEvent {
     courseCode: '',
     date: toDateId(date),
     time: '23:59',
+    durationMinutes: null,
     weight: 3,
     score: null,
     location: '',

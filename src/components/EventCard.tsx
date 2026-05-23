@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { Check, Pencil, Trash2, X } from 'lucide-react'
 import type { CalendarEvent, DraftEvent } from '../domain/types'
 import { formatCountdown, formatDeadlineType, getEventDeadlineType } from '../domain/deadlines'
-import { normalizeWeight, tagForEventCourse } from '../domain/courseMeta'
+import { normalizeDurationMinutes, normalizeWeight, tagForEventCourse } from '../domain/courseMeta'
 import { usePlanner } from '../data/usePlanner'
 import { useModalBodyLock } from './useModalBodyLock'
 
@@ -75,6 +75,7 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
     courseCode: event?.courseCode ?? '',
     date: event?.date ?? new Date().toISOString().slice(0, 10),
     time: event?.time ?? '23:59',
+    durationMinutes: event?.durationMinutes ?? (event?.type === 'exam' ? 120 : null),
     weight: event?.weight ?? (event?.type === 'exam' ? 10 : 3),
     score: event?.score ?? null,
     location: event?.location ?? '',
@@ -112,15 +113,30 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
           <input className="modal-title-input" value={draft.title} onChange={(inputEvent) => setDraft({ ...draft, title: inputEvent.target.value })} placeholder="What needs doing?" autoFocus />
           <section className="modal-section">
             <label className="modal-section-label">When</label>
-            <div className="modal-row">
+            <div className={`modal-row ${isExam ? 'three' : ''}`}>
               <div className="modal-input-wrap">
                 <span className="modal-input-tag mono">Date</span>
                 <input className="modal-input center" type="date" value={draft.date} onChange={(inputEvent) => setDraft({ ...draft, date: inputEvent.target.value })} />
               </div>
               <div className="modal-input-wrap">
-                <span className="modal-input-tag mono">Time</span>
+                <span className="modal-input-tag mono">{isExam ? 'Start' : 'Due'}</span>
                 <input className="modal-input center" type="time" value={draft.time} onChange={(inputEvent) => setDraft({ ...draft, time: inputEvent.target.value })} />
               </div>
+              {isExam && (
+                <div className="modal-input-wrap">
+                  <span className="modal-input-tag mono">Duration</span>
+                  <input
+                    className="modal-input center"
+                    type="number"
+                    min="15"
+                    max="360"
+                    step="15"
+                    value={draft.durationMinutes ?? 120}
+                    onChange={(inputEvent) => setDraft({ ...draft, durationMinutes: normalizeDurationMinutes(inputEvent.target.value) ?? 120 })}
+                    placeholder="120"
+                  />
+                </div>
+              )}
             </div>
           </section>
           <section className="modal-section">

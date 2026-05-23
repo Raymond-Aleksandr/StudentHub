@@ -72,3 +72,19 @@ export function normalizeWeight(value: unknown): number | null {
   if (!Number.isFinite(parsed)) return null
   return Math.max(0, Math.min(100, Math.round(parsed * 10) / 10))
 }
+
+export function normalizeDurationMinutes(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = typeof value === 'number' ? value : Number(String(value).trim())
+  if (!Number.isFinite(parsed)) return null
+  return Math.max(15, Math.min(360, Math.round(parsed)))
+}
+
+export function inferDurationMinutes(value: string): number | null {
+  const text = value.toLowerCase()
+  const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)\b/)
+  if (hourMatch) return normalizeDurationMinutes(Number(hourMatch[1]) * 60)
+  const minuteMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes)\b/)
+  if (minuteMatch) return normalizeDurationMinutes(Number(minuteMatch[1]))
+  return null
+}

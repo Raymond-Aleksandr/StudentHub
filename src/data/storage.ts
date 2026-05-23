@@ -1,5 +1,5 @@
-import { normalizeDeadlineType } from '../domain/deadlines'
-import { normalizeCourseColor, normalizePercent, normalizeWeight } from '../domain/courseMeta'
+import { deadlineTypeToEventType, normalizeDeadlineType } from '../domain/deadlines'
+import { inferDurationMinutes, normalizeCourseColor, normalizeDurationMinutes, normalizePercent, normalizeWeight } from '../domain/courseMeta'
 import { dedupeCalendarEvents } from '../domain/merge'
 import type { CalendarEvent, ClassInfo, SyllabusUpload } from '../domain/types'
 
@@ -45,18 +45,21 @@ function subscribeToKey(key: string, listener: () => void): Unsubscribe {
 // Normalization.
 
 function normalizeCalendarEvent(event: Partial<CalendarEvent>): CalendarEvent {
+  const deadlineType = normalizeDeadlineType(event.deadlineType, event.type === 'exam' ? 'exam' : 'assignment')
+  const type = deadlineTypeToEventType(deadlineType)
   return {
     title: event.title ?? '',
     courseCode: event.courseCode ?? '',
     date: event.date ?? '',
     time: event.time ?? '',
+    durationMinutes: normalizeDurationMinutes(event.durationMinutes) ?? (type === 'exam' ? inferDurationMinutes(event.format ?? '') ?? 120 : null),
     weight: normalizeWeight(event.weight),
     score: normalizePercent(event.score),
     location: event.location ?? '',
     format: event.format ?? '',
     priority: event.priority === 'medium' || event.priority === 'low' ? event.priority : 'high',
-    type: event.type === 'exam' ? 'exam' : 'assignment',
-    deadlineType: normalizeDeadlineType(event.deadlineType, event.type === 'exam' ? 'exam' : 'assignment'),
+    type,
+    deadlineType,
     sourceUploadId: event.sourceUploadId ?? '',
     completed: Boolean(event.completed),
     reminderDaysBefore: typeof event.reminderDaysBefore === 'number'
@@ -112,19 +115,24 @@ function normalizeUpload(upload: Partial<SyllabusUpload>): SyllabusUpload {
         }
       : undefined,
     parsedEvents: Array.isArray(upload.parsedEvents)
-      ? upload.parsedEvents.map((event) => ({
-          title: event.title ?? '',
-          courseCode: event.courseCode ?? '',
-          date: event.date ?? '',
-          time: event.time ?? '',
-          weight: normalizeWeight(event.weight),
-          score: normalizePercent(event.score),
-          location: event.location ?? '',
-          format: event.format ?? '',
-          type: event.type === 'exam' ? 'exam' : 'assignment',
-          deadlineType: normalizeDeadlineType(event.deadlineType, event.type === 'exam' ? 'exam' : 'assignment'),
-          priority: event.priority === 'medium' || event.priority === 'low' ? event.priority : 'high',
-        }))
+      ? upload.parsedEvents.map((event) => {
+          const deadlineType = normalizeDeadlineType(event.deadlineType, event.type === 'exam' ? 'exam' : 'assignment')
+          const type = deadlineTypeToEventType(deadlineType)
+          return {
+            title: event.title ?? '',
+            courseCode: event.courseCode ?? '',
+            date: event.date ?? '',
+            time: event.time ?? '',
+            durationMinutes: normalizeDurationMinutes(event.durationMinutes) ?? (type === 'exam' ? inferDurationMinutes(event.format ?? '') ?? 120 : null),
+            weight: normalizeWeight(event.weight),
+            score: normalizePercent(event.score),
+            location: event.location ?? '',
+            format: event.format ?? '',
+            type,
+            deadlineType,
+            priority: event.priority === 'medium' || event.priority === 'low' ? event.priority : 'high',
+          }
+        })
       : [],
   }
 }

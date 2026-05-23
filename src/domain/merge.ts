@@ -1,6 +1,6 @@
 import type { CalendarEvent, ClassInfo } from './types'
 import { deadlineTypeToEventType, isSameCalendarEvent, sortEventsByDate } from './deadlines'
-import { normalizeCourseColor, normalizePercent, normalizeWeight } from './courseMeta'
+import { inferDurationMinutes, normalizeCourseColor, normalizeDurationMinutes, normalizePercent, normalizeWeight } from './courseMeta'
 
 // Course helpers.
 
@@ -112,6 +112,7 @@ export function normalizeEvents(events: Partial<CalendarEvent>[], uploadId: stri
         courseCode: event.courseCode ?? '',
         date: event.date ?? '',
         time: event.time ?? '',
+        durationMinutes: normalizeDurationMinutes(event.durationMinutes) ?? (type === 'exam' ? inferDurationMinutes(event.format ?? '') ?? 120 : null),
         weight: normalizeWeight(event.weight),
         score: normalizePercent(event.score),
         location: event.location ?? '',

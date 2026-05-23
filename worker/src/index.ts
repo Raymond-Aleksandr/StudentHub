@@ -21,6 +21,7 @@ type ParsedEvent = {
     courseCode: string
     date: string
     time: string
+    durationMinutes?: number | null
     weight: number | null
     location: string
     format: string
@@ -135,7 +136,7 @@ function schemaPrompt() {
     'Return valid JSON only. No markdown, prose, raw PDF text, policies, readings, or explanations.',
     '',
     'Output shape:',
-    '{"course":{"title":"","code":"","day":"","startTime":"","endTime":"","time":"","location":"","profName":"","profEmail":"","taName":"","taEmail":""},"events":[{"title":"","courseCode":"","date":"","time":"","weight":null,"location":"","format":"","priority":"low","type":"assignment","deadlineType":"assignment"}]}',
+    '{"course":{"title":"","code":"","day":"","startTime":"","endTime":"","time":"","location":"","profName":"","profEmail":"","taName":"","taEmail":""},"events":[{"title":"","courseCode":"","date":"","time":"","durationMinutes":null,"weight":null,"location":"","format":"","priority":"low","type":"assignment","deadlineType":"assignment"}]}',
     '',
     'Course:',
     '- Use the official course title and full course code. Preserve combined codes, e.g. "IRM 3004 / OSS 3009".',
@@ -155,7 +156,8 @@ function schemaPrompt() {
     '',
     'Fields:',
     '- date must be ISO yyyy-mm-dd or "". Use the course term year for month/day dates.',
-    '- time must be 24-hour HH:mm or "".',
+    '- time must be 24-hour HH:mm or "". For exams/tests/quizzes, this is the scheduled start time. For assignments, this is the due time.',
+    '- durationMinutes is only for exams/tests/quizzes. Use an official duration when stated, otherwise null. Do not use duration for assignment due times.',
     '- weight must be a number from 0 to 100, or null if genuinely absent.',
     '- type must be "exam" only for quiz, test, midterm, or final exam. Everything else is "assignment".',
     '- deadlineType must be one of: assignment, quiz, test, exam, presentation, project, lab-report, other.',
@@ -197,6 +199,14 @@ function normalizeNumber(value: unknown): number | null {
   const parsed = Number(value.replace('%', '').trim())
   if (!Number.isFinite(parsed)) return null
   return Math.max(0, Math.min(100, Math.round(parsed * 10) / 10))
+}
+
+function normalizeDurationMinutes(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(15, Math.min(360, Math.round(value)))
+  if (typeof value !== 'string') return null
+  const parsed = Number(value.trim())
+  if (!Number.isFinite(parsed)) return null
+  return Math.max(15, Math.min(360, Math.round(parsed)))
 }
 
 function isInstructionalOrCalendarNote(title: string) {
@@ -256,6 +266,7 @@ export function normalizeParsedPayload(payload: Partial<ParsedSyllabusResponse>)
       courseCode: event.courseCode || course.code || '',
       date: event.date || '',
       time: event.time || '',
+      durationMinutes: type === 'exam' ? normalizeDurationMinutes(event.durationMinutes) : null,
       weight: normalizeNumber(event.weight),
       location: event.location || '',
       format: event.format || '',

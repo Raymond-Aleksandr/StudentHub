@@ -13,6 +13,13 @@ function dateTime(date: string, time: string) {
   return `${new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}${time ? ` · ${time}` : ''}`
 }
 
+function durationLabel(minutes: number | null) {
+  if (!minutes) return ''
+  if (minutes % 60 === 0) return `${minutes / 60}h`
+  if (minutes > 60) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+  return `${minutes}m`
+}
+
 function daysLabel(date: string) {
   if (!date) return 'TBD'
   const days = getDaysUntil(date)
@@ -67,6 +74,7 @@ export default function ExamsPage() {
             <div className="hero-exam-title serif">{nextTitle}</div>
             <div className="hero-exam-meta">
               <span><Clock size={13} /> {dateTime(next.date, next.time)}</span>
+              {next.durationMinutes && <span className="mono">{durationLabel(next.durationMinutes)}</span>}
               <span className="mono">{next.weight ? `${next.weight}% term` : hasDate && daysOut <= 7 ? 'This week' : hasDate ? 'Scheduled' : 'Date needed'}</span>
               {next.format && <span className="mono">{next.format}</span>}
             </div>
@@ -172,6 +180,7 @@ export default function ExamsPage() {
                   </div>
                   <h3 className="serif">{titleText}</h3>
                   <div className="ec-date mono">{dateTime(event.date, event.time)}</div>
+                  {event.durationMinutes && <div className="ec-date mono">{durationLabel(event.durationMinutes)}</div>}
                   {event.weight !== null && event.weight !== undefined && <div className="ec-weight mono">{event.weight}% term</div>}
                 </button>
               )
@@ -205,6 +214,7 @@ function newExamDraft(): DraftEvent {
     courseCode: '',
     date: date.toISOString().slice(0, 10),
     time: '09:00',
+    durationMinutes: 120,
     weight: 10,
     score: null,
     location: '',

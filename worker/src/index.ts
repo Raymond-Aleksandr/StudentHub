@@ -38,6 +38,7 @@ type ParsedSyllabusResponse = {
 
 type Env = {
   ALLOWED_ORIGINS?: string
+  ALLOW_PRIVATE_NETWORK_ORIGINS?: string
   MAX_FILE_BYTES?: string
   OPENROUTER_API_KEY?: string
   OPENROUTER_MODEL?: string
@@ -80,9 +81,29 @@ function getAllowedOrigins(env: Env) {
     .filter(Boolean)
 }
 
+function isPrivateNetworkOrigin(origin: string) {
+  try {
+    const url = new URL(origin)
+    if (url.protocol !== 'http:') return false
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return true
+
+    const parts = url.hostname.split('.').map(Number)
+    if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false
+    const [first, second] = parts
+
+    return first === 10 ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168) ||
+      (first === 169 && second === 254)
+  } catch {
+    return false
+  }
+}
+
 function getAllowedOrigin(request: Request, env: Env) {
   const origin = request.headers.get('origin') || ''
   if (!origin) return ''
+  if (env.ALLOW_PRIVATE_NETWORK_ORIGINS === 'true' && isPrivateNetworkOrigin(origin)) return origin
   return getAllowedOrigins(env).includes(origin) ? origin : ''
 }
 
@@ -110,40 +131,40 @@ async function fileToBase64(file: File) {
 
 function schemaPrompt() {
   return [
-    'Extract a university syllabus into strict JSON for StudentHub, a student planner.',
-    'Return only JSON. No markdown. No commentary.',
+    'Extract only planner-relevant data from a university syllabus.',
+    'Return valid JSON only. No markdown, prose, raw PDF text, policies, readings, or explanations.',
     '',
-    'Course extraction:',
-    '- Extract the official course title and full course code, including combined codes such as "IRM 3004 / OSS 3009".',
-    '- Extract lecture day, startTime, endTime, room/location, instructor name/email, and TA name/email when present.',
+    'Output shape:',
+    '{"course":{"title":"","code":"","day":"","startTime":"","endTime":"","time":"","location":"","profName":"","profEmail":"","taName":"","taEmail":""},"events":[{"title":"","courseCode":"","date":"","time":"","weight":null,"location":"","format":"","priority":"low","type":"assignment","deadlineType":"assignment"}]}',
     '',
-    'Date and time rules:',
-    'Dates must be ISO yyyy-mm-dd. Times must be 24-hour HH:mm or empty string.',
-    'Use the term year for dates that omit a year. Example: Winter 2026 with "February 23" means "2026-02-23".',
-    'Use empty strings when unknown.',
+    'Course:',
+    '- Use the official course title and full course code. Preserve combined codes, e.g. "IRM 3004 / OSS 3009".',
+    '- Extract one primary lecture schedule only. Ignore office hours, tutorial times, and administrative dates.',
+    '- startTime/endTime must be 24-hour HH:mm. Use "" when unknown.',
     '',
-    'Assessment extraction:',
-    '- Use the grading/evaluation table as the source of truth for assessment titles, weights, and assessment existence.',
-    '- Extract assessment weights as numbers in the "weight" field. Use null only when no weight is listed.',
-    '- Include weighted assessments even when they do not have an exact date; set date "" and time "".',
-    '- Prefer due dates from the grading/evaluation table. Use schedule notes only to fill missing dates for the same named assessment.',
-    '- Do not duplicate the same assessment when it appears in both the grading table and weekly schedule notes.',
-    '- If one assessment has multiple possible dates and one shared weight, create one event using the earliest date and put the other dates in "format". Do not repeat the full weight on multiple events.',
-    '- If a final exam is listed with a weight but no exact date, include exactly one Final Exam event with date "" and time "".',
-    '- Never infer a final exam date from "official final exam period", "exam review", or university sessional dates.',
+    'Events:',
+    '- Events are graded assessments only: assignments, essays, labs, projects, presentations, quizzes, tests, midterms, final exams.',
+    '- Use the grading/evaluation table as canonical for assessment existence, titles, and weights.',
+    '- Use schedule/calendar notes only to fill a missing due date for an assessment already found in the grading/evaluation table.',
+    '- Exclude lectures, readings, topics, reading week, holidays, course intro, exam review, office hours, policy text, withdrawal dates, accommodation dates, and university-wide dates.',
+    '- Include weighted assessments even when no exact date exists. Use date "" and time "".',
+    '- For a final exam with a weight but no exact scheduled date, create exactly one "Final Exam" event with date "".',
+    '- Never invent a date from "official final exam period" or from an exam review class.',
+    '- Do not duplicate one assessment because it appears in multiple sections.',
+    '- If one assessment has multiple dates and one shared weight, create one event on the earliest date and mention the other dates in "format".',
     '',
-    'Exclude non-assessment content:',
-    '- Do not turn lecture topics, readings, reading weeks, course introductions, exam review sessions, holidays, withdrawal deadlines, accommodation deadlines, or university calendar dates into planner events.',
+    'Fields:',
+    '- date must be ISO yyyy-mm-dd or "". Use the course term year for month/day dates.',
+    '- time must be 24-hour HH:mm or "".',
+    '- weight must be a number from 0 to 100, or null if genuinely absent.',
+    '- type must be "exam" only for quiz, test, midterm, or final exam. Everything else is "assignment".',
+    '- deadlineType must be one of: assignment, quiz, test, exam, presentation, project, lab-report, other.',
+    '- priority must be high, medium, or low.',
     '',
-    'Classification rules:',
-    'Event type must be "assignment" or "exam".',
-    'deadlineType must be one of: assignment, quiz, test, exam, presentation, project, lab-report, other.',
-    'Use type "exam" only for quiz, test, midterm, or final exam assessments.',
-    'Use deadlineType "assignment" for essays, reports, briefs, tutorial assignments, and evaluation reports unless a more specific listed type clearly applies.',
-    'priority must be high, medium, or low.',
+    'Validation target:',
+    '- If the syllabus has a complete grading table, extracted weights should usually sum to 100.',
+    '- If a row is split across notes, keep the grading-table weight only once.',
     '',
-    'Shape:',
-    '{"course":{"title":"","code":"","day":"","startTime":"","endTime":"","time":"","location":"","profName":"","profEmail":"","taName":"","taEmail":""},"events":[{"title":"","courseCode":"","date":"","time":"","weight":null,"location":"","format":"","priority":"low","type":"assignment","deadlineType":"assignment"}],"rawText":""}',
   ].join('\n')
 }
 

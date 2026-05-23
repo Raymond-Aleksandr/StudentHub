@@ -26,6 +26,7 @@ sketch
 .env.*.local
 .dev.vars
 worker/.dev.vars
+worker/.wrangler/
 
 # IDE files
 /.idea/

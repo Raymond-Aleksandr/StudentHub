@@ -22,6 +22,20 @@ function normalizeWorkerResponse(data: Partial<ParsedSyllabusData>): ParsedSylla
   }
 }
 
+function isPrivateNetworkHostname(hostname: string) {
+  if (hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '::1') return true
+  if (hostname.endsWith('.local')) return true
+
+  const parts = hostname.split('.').map(Number)
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false
+  const [first, second] = parts
+
+  return first === 10 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 169 && second === 254)
+}
+
 export function getSyllabusParserEndpoint(): string {
   const configuredEndpoint = import.meta.env.VITE_SYLLABUS_PARSER_URL?.trim()
   if (configuredEndpoint) return configuredEndpoint
@@ -29,6 +43,9 @@ export function getSyllabusParserEndpoint(): string {
   const hostname = window.location.hostname
   if (hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '::1') {
     return LOCAL_SYLLABUS_PARSER_URL
+  }
+  if (isPrivateNetworkHostname(hostname)) {
+    return `http://${hostname}:8787/parse`
   }
 
   // Production: use default Worker URL unless overridden
@@ -67,7 +84,7 @@ export async function parseSyllabusPdf(file: File): Promise<ParsedSyllabusData> 
       throw new Error('Syllabus parser Worker timed out. Check that the Worker is deployed and reachable.')
     }
     if (error instanceof TypeError) {
-      const isLocalEndpoint = endpoint.startsWith('http://127.0.0.1') || endpoint.startsWith('http://localhost')
+      const isLocalEndpoint = endpoint.startsWith('http://127.0.0.1') || endpoint.startsWith('http://localhost') || endpoint.includes(':8787/parse')
       throw new Error(isLocalEndpoint
         ? `Local syllabus parser Worker is not reachable at ${endpoint}. Start it with npm run worker:dev and configure worker/.dev.vars.`
         : 'Syllabus parser Worker is unreachable. Check the Worker URL, deployment status, and allowed origin configuration.')

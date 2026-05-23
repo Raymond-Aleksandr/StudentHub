@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "worker:dev": "cd worker && npx wrangler dev",
+    "worker:dev": "cd worker && npx wrangler dev --ip 0.0.0.0",
     "worker:deploy": "cd worker && npx wrangler deploy",
     "worker:check": "cd worker && npx wrangler deploy --dry-run"
   },

@@ -90,11 +90,11 @@ There is no separate test script in `package.json` at the moment. TypeScript che
 Available root scripts:
 
 ```bash
-npm run dev            # Vite dev server
+npm run dev            # Vite dev server, reachable from local network
 npm run build          # TypeScript project build + Vite production build
 npm run lint           # ESLint
 npm run preview        # Preview the production build
-npm run worker:dev     # Run the Cloudflare Worker locally
+npm run worker:dev     # Run the Cloudflare Worker locally, reachable from local network
 npm run worker:deploy  # Deploy the Worker with Wrangler
 npm run worker:check   # Wrangler dry-run deploy check
 ```
@@ -117,6 +117,12 @@ When the frontend runs on `http://127.0.0.1` or `http://localhost`, it uses:
 http://127.0.0.1:8787/parse
 ```
 
+When the frontend runs on a private LAN address, such as `http://10.0.0.74:5173`, it uses the same host for the Worker:
+
+```text
+http://10.0.0.74:8787/parse
+```
+
 The default `worker/.dev.vars.example` allows these local frontend origins:
 
 ```text
@@ -125,6 +131,8 @@ http://localhost:5173
 ```
 
 If Vite starts on another port, update `ALLOWED_ORIGINS` in `worker/.dev.vars`.
+
+For phone testing on the same Wi-Fi, run both dev servers and open the Vite network URL shown in the terminal, for example `http://10.0.0.74:5173`. The local Worker script listens on `0.0.0.0`, and `.dev.vars.example` enables private-network origins for local development only.
 
 Quick Worker health check:
 

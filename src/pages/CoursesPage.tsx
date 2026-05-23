@@ -8,6 +8,7 @@ import { courseColorOptions, courseMatchesEvent, normalizePercent, splitCourseCo
 import { getCourseGrade, getWeightStats } from '../domain/grades'
 import { EventCard } from '../components/EventCard'
 import { useModalBodyLock } from '../components/useModalBodyLock'
+import { isNativeRuntime } from '../native/runtime'
 
 function CourseCodePills({ code, tag }: { code: string; tag: string }) {
   const codes = splitCourseCodes(code)
@@ -294,6 +295,7 @@ function CourseEditorModal({
   onDelete?: () => void
 }) {
   useModalBodyLock()
+  const nativeRuntime = isNativeRuntime()
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => {
@@ -308,7 +310,6 @@ function CourseEditorModal({
               value={draft.title}
               onChange={(event) => onPatch('title', event.target.value)}
               placeholder="Course title"
-              autoFocus
             />
           </div>
           <button className="tp-close" type="button" onClick={onClose} aria-label="Close">
@@ -331,11 +332,11 @@ function CourseEditorModal({
             </label>
             <label className="modal-field">
               <span>Start time</span>
-              <input className="modal-input" type="time" value={draft.startTime} onChange={(event) => onPatch('startTime', event.target.value)} />
+              <StableCourseTimeInput value={draft.startTime} nativeRuntime={nativeRuntime} onChange={(value) => onPatch('startTime', value)} />
             </label>
             <label className="modal-field">
               <span>End time</span>
-              <input className="modal-input" type="time" value={draft.endTime} onChange={(event) => onPatch('endTime', event.target.value)} />
+              <StableCourseTimeInput value={draft.endTime} nativeRuntime={nativeRuntime} onChange={(value) => onPatch('endTime', value)} />
             </label>
           </div>
 
@@ -398,6 +399,33 @@ function CourseEditorModal({
           </button>
         </div>
       </section>
+    </div>
+  )
+}
+
+function StableCourseTimeInput({
+  nativeRuntime,
+  value,
+  onChange,
+}: {
+  nativeRuntime: boolean
+  value: string
+  onChange: (value: string) => void
+}) {
+  if (!nativeRuntime) {
+    return <input className="modal-input" type="time" value={value} onChange={(event) => onChange(event.target.value)} />
+  }
+
+  return (
+    <div className="modal-input native-picker-shell">
+      <span className="native-picker-value">{value || 'HH:MM'}</span>
+      <input
+        className="native-picker-control"
+        type="time"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label="Time"
+      />
     </div>
   )
 }

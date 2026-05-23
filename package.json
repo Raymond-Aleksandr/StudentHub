@@ -10,9 +10,20 @@
     "preview": "vite preview",
     "worker:dev": "cd worker && npx wrangler dev --ip 0.0.0.0",
     "worker:deploy": "cd worker && npx wrangler deploy",
-    "worker:check": "cd worker && npx wrangler deploy --dry-run"
+    "worker:check": "cd worker && npx wrangler deploy --dry-run",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android",
+    "cap:add:ios": "npx cap add ios",
+    "cap:add:android": "npx cap add android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
+    "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/preferences": "^8.0.1",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

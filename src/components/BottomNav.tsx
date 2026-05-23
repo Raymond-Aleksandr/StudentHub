@@ -1,5 +1,6 @@
 import { BookOpen, FileUp, GraduationCap, Home, ListChecks } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { isActiveNavPath } from '../navReset'
 import './BottomNav.css'
 
 const items = [
@@ -10,21 +11,15 @@ const items = [
   { label: 'Courses', path: '/course-info', icon: BookOpen },
 ]
 
-function navResetState() {
-  return { navResetAt: Date.now() }
-}
-
 function BottomNav() {
   const location = useLocation()
   const navigate = useNavigate()
-  const openNavItem = (path: string) => {
-    if (location.pathname === path) {
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
-      void navigate(path, { replace: true, state: navResetState() })
-      return
-    }
 
-    void navigate(path)
+  const handleNavClick = (path: string, resetAt: number) => {
+    navigate(path, {
+      replace: isActiveNavPath(location.pathname, path),
+      state: { navResetAt: resetAt },
+    })
   }
 
   return (
@@ -33,7 +28,7 @@ function BottomNav() {
         <button
           key={path}
           className={location.pathname === path ? 'active' : ''}
-          onClick={() => openNavItem(path)}
+          onClick={(event) => handleNavClick(path, event.timeStamp)}
           type="button"
         >
           <Icon size={18} />

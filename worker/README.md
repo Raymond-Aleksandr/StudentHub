@@ -1,20 +1,33 @@
-# StudentHub Syllabus Parser Worker
+# StudentHub Optional Parser Worker
 
-This Cloudflare Worker accepts PDF syllabus uploads from the configured GitHub Pages origin and returns the JSON shape that the StudentHub frontend expects.
+This folder contains an optional Cloudflare Worker parser. The current root StudentHub app does not call this Worker by default; the active parser path is the local user-selected AI provider configured on the Import page.
 
-It is safe to commit this folder because it contains no secrets. Each deployer must provide their own API key through Cloudflare secrets.
+Keep this Worker if you want a hosted proxy-parser mode later, or if you want to test a server-side OpenRouter parser without putting provider calls in the browser/native app.
 
-## Security Model
+## What It Does
 
-- `POST /parse` is allowed only when the browser `Origin` exactly matches `ALLOWED_ORIGINS`.
-- Local development can allow private-network `http://` origins when `ALLOW_PRIVATE_NETWORK_ORIGINS=true`.
-- The default allowed origin is `https://raymond-aleksandr.github.io`.
-- Secrets are read from Cloudflare Worker secrets, not source code.
-- Uploaded PDFs are not stored by this Worker.
+- Accepts `POST /parse` PDF uploads.
+- Validates the browser `Origin` against `ALLOWED_ORIGINS`.
+- Calls OpenRouter with the configured model and PDF parser engine.
+- Returns the JSON shape expected by StudentHub's import pipeline.
+- Does not store uploaded PDFs.
 
-Browser origin checks are meant to protect the public frontend path. They are not a substitute for account-level abuse controls, rate limiting, or Turnstile on a high-traffic production deployment.
+Browser origin checks reduce accidental public use, but they are not full abuse protection. A public parser should also consider rate limits, account-level controls, and Turnstile or another abuse gate.
 
-## Deploy Your Own
+## Local Development
+
+From the repo root:
+
+```bash
+cp worker/.dev.vars.example worker/.dev.vars
+npm run worker:dev
+```
+
+Add your own `OPENROUTER_API_KEY` to `worker/.dev.vars`. That file is ignored by git.
+
+`npm run worker:dev` binds Wrangler to `0.0.0.0` through the root script so a phone on the same network can reach the local Worker when the firewall allows it.
+
+## Deploy
 
 ```bash
 cd worker
@@ -24,48 +37,41 @@ npx wrangler secret put OPENROUTER_API_KEY
 npx wrangler deploy
 ```
 
-After deployment, set the frontend environment variable:
-
-```env
-VITE_SYLLABUS_PARSER_URL=https://your-worker.your-subdomain.workers.dev/parse
-```
-
-This repo's frontend currently defaults to:
-
-```text
-https://studenthub-syllabus-parser.h-5c7.workers.dev/parse
-```
-
-The default model is `google/gemini-3.5-flash` through OpenRouter. PDF parsing uses OpenRouter's `file-parser` plugin with the `cloudflare-ai` engine by default. You can change these with `OPENROUTER_MODEL` and `OPENROUTER_PDF_ENGINE` in `wrangler.jsonc`.
-
-For local Worker development, copy `.dev.vars.example` to `.dev.vars` and add your own local key:
-
-```bash
-cp worker/.dev.vars.example worker/.dev.vars
-npm run worker:dev
-```
-
-The frontend defaults to `http://127.0.0.1:8787/parse` when it is running on localhost. When the frontend is opened from a private LAN address, such as `http://10.0.0.74:5173` on a phone, it calls `http://10.0.0.74:8787/parse`.
-
-The root `npm run dev` and `npm run worker:dev` scripts both listen on `0.0.0.0` for local network testing. The local `.dev.vars.example` allows localhost and enables private-network origins with `ALLOW_PRIVATE_NETWORK_ORIGINS=true`. Keep the deployed Worker config restricted to your Pages origin.
-
-## Configure Allowed Origins
-
-For a fork or a custom Pages domain, update `ALLOWED_ORIGINS` in `wrangler.jsonc`.
-
-Use comma-separated origins only, with no path:
+The configured model defaults to `google/gemini-3.5-flash` through OpenRouter. The PDF parser engine defaults to `cloudflare-ai`. Change these in `wrangler.jsonc` if needed:
 
 ```jsonc
 {
   "vars": {
-    "ALLOWED_ORIGINS": "https://your-name.github.io,https://planner.example.com"
+    "OPENROUTER_MODEL": "google/gemini-3.5-flash",
+    "OPENROUTER_PDF_ENGINE": "cloudflare-ai"
   }
 }
 ```
 
-## Response Shape
+## Allowed Origins
 
-The Worker returns:
+Production `ALLOWED_ORIGINS` should contain origins only, with no path:
+
+```jsonc
+{
+  "vars": {
+    "ALLOWED_ORIGINS": "https://raymond-aleksandr.github.io,https://planner.example.com"
+  }
+}
+```
+
+Local private-network origins can be enabled through `.dev.vars.example` for development. Keep deployed Worker origins tight.
+
+## Checks
+
+```bash
+npm run worker:check
+cd worker && npm test
+```
+
+`worker:check` is a Wrangler dry-run deploy. It may require Cloudflare/Wrangler access.
+
+## Response Shape
 
 ```json
 {
@@ -88,6 +94,7 @@ The Worker returns:
       "courseCode": "",
       "date": "2026-09-15",
       "time": "",
+      "durationMinutes": null,
       "weight": 10,
       "location": "",
       "format": "",

@@ -220,5 +220,7 @@ function newExamDraft(): DraftEvent {
     location: '',
     format: '',
     deadlineType: 'exam',
+    reminderEnabled: true,
+    reminderDaysBefore: 7,
   }
 }

@@ -115,5 +115,7 @@ function newTaskDraft(): DraftEvent {
     location: '',
     format: '',
     deadlineType: 'assignment',
+    reminderEnabled: true,
+    reminderDaysBefore: 2,
   }
 }

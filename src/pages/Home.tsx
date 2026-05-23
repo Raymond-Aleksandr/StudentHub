@@ -30,11 +30,11 @@ const marqueeItems = [
 const steps = [
   {
     title: 'Drop your syllabi',
-    body: 'Drag in PDFs from email, Canvas, or your downloads folder. Multiple files at once. Re-uploads simply replace.',
+    body: 'Drag in PDFs from email, Canvas, or your downloads folder. Multiple files at once, merged into your current term.',
   },
   {
     title: 'Parser extracts the structure',
-    body: 'A Cloudflare Worker handles the parsing. API keys never ship in the frontend. Course code, meeting times, every dated row.',
+    body: 'Your selected AI provider reads the PDF and returns course codes, meeting times, assessment weights, due dates, and exam details.',
   },
   {
     title: 'Review & confirm',
@@ -42,7 +42,7 @@ const steps = [
   },
   {
     title: 'Plan from your phone',
-    body: 'A bottom-tab planner built for quick checks between classes. Optionally sync across devices with your own Firebase.',
+    body: 'A bottom-tab planner built for quick checks between classes, with native notifications in the iOS and Android app.',
   },
 ]
 
@@ -74,7 +74,7 @@ const features = [
   },
   {
     title: 'Private by default',
-    body: 'Local storage in this browser. Bring your own Firebase if you want cross-device sync; never required.',
+    body: 'Planner data and parser settings stay in this browser or app profile. No server account is required.',
     visual: 'private',
   },
 ]
@@ -86,14 +86,14 @@ const faqs = [
       "By default, in your browser's local storage. Nothing leaves the device unless you connect your own sync backend.",
   },
   {
-    question: 'What does the Cloudflare Worker do?',
+    question: 'How does syllabus parsing work?',
     answer:
-      'The parser uses an LLM to read PDFs. Running it from a Worker keeps the API key off the client.',
+      'Choose an AI provider, save your own key locally, then upload PDFs. The PDF is sent to that provider only when you import it.',
   },
   {
     question: 'Does it work without an account?',
     answer:
-      'Yes. Open it, drop a syllabus, plan your term. An optional account only matters if you want sync across devices.',
+      'Yes. The native app opens straight into a device-local planner. The web app keeps login and blank-profile options for separating local browser plans.',
   },
   {
     question: 'Can I edit what the parser pulled?',
@@ -103,7 +103,7 @@ const faqs = [
   {
     question: 'Is it free?',
     answer:
-      "The app is free. Syllabus parsing costs whatever your Worker's LLM costs, typically a fraction of a cent per PDF.",
+      'The app is free. Syllabus parsing costs whatever your selected AI provider charges for PDF/document requests.',
   },
 ]
 
@@ -185,7 +185,7 @@ function Home() {
                 Open the planner <ArrowRight size={16} />
               </button>
               <button className="btn btn-ghost" onClick={() => goToSection('#how')}>See it work</button>
-              <span className="landing-micro">No account needed · <b>4 syllabi in &lt; 12s</b></span>
+              <span className="landing-micro">Local profile · <b>no cloud account required</b></span>
             </div>
           </div>
 
@@ -399,7 +399,7 @@ function FeatureVisual({ type }: { type: string }) {
   if (type === 'courses') {
     return <div className="landing-vis landing-vis-courses"><i /><i /><i /></div>
   }
-  return <div className="landing-vis"><ShieldCheck size={22} /><span>Local-first · BYO Firebase optional</span></div>
+  return <div className="landing-vis"><ShieldCheck size={22} /><span>Local-first · no server storage</span></div>
 }
 
 export default Home

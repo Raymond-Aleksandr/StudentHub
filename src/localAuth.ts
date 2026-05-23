@@ -127,6 +127,16 @@ export async function signInAsBlankUser(_auth: typeof auth) {
   return { user: auth.currentUser }
 }
 
+export async function ensureNativeDeviceUser(_auth: typeof auth) {
+  void _auth
+  if (auth.currentUser) return { user: auth.currentUser }
+
+  auth.currentUser = { uid: 'native:device', email: 'device@studenthub.local' }
+  writeJson(currentUserKey, auth.currentUser)
+  notifyAuthListeners()
+  return { user: auth.currentUser }
+}
+
 function resetBlankPlanner(uid: string) {
   writeJson(`studenthub.${uid}.classes`, { classes: [] })
   writeJson(`studenthub.${uid}.calendar`, { events: [] })

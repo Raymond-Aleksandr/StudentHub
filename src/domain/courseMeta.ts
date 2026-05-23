@@ -1,6 +1,6 @@
 import type { CalendarEvent, ClassInfo } from './types'
 
-export const courseTagVars = [
+const courseTagVars = [
   'var(--tag-ochre)',
   'var(--tag-plum)',
   'var(--tag-slate)',
@@ -34,7 +34,7 @@ export function splitCourseCodes(code: string) {
   return code.split(/\s*(?:\/|,|;|\+|&|\band\b)\s*/i).map((part) => part.trim()).filter(Boolean)
 }
 
-export function tagForCourseCode(courseCode: string, fallbackIndex = 0) {
+function tagForCourseCode(courseCode: string, fallbackIndex = 0) {
   const normalized = courseCode.replace(/\s+/g, '').toUpperCase()
   if (!normalized) return courseTagVars[fallbackIndex % courseTagVars.length]
   let hash = 0

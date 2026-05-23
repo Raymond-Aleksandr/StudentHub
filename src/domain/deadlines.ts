@@ -1,4 +1,4 @@
-export const DEADLINE_TYPES = [
+const DEADLINE_TYPES = [
   'assignment',
   'quiz',
   'test',
@@ -11,7 +11,7 @@ export const DEADLINE_TYPES = [
 
 export type DeadlineType = typeof DEADLINE_TYPES[number]
 
-export const DEADLINE_TYPE_LABELS: Record<DeadlineType, string> = {
+const DEADLINE_TYPE_LABELS: Record<DeadlineType, string> = {
   assignment: 'Assignment',
   quiz: 'Quiz',
   test: 'Test',
@@ -20,17 +20,6 @@ export const DEADLINE_TYPE_LABELS: Record<DeadlineType, string> = {
   project: 'Project',
   'lab-report': 'Lab Report',
   other: 'Other',
-}
-
-export const DEADLINE_TYPE_COLORS: Record<DeadlineType, string> = {
-  assignment: '#60A5FA',
-  quiz: '#A78BFA',
-  test: '#38BDF8',
-  exam: '#F472B6',
-  presentation: '#2DD4BF',
-  project: '#818CF8',
-  'lab-report': '#E879F9',
-  other: '#94A3B8',
 }
 
 const EXAM_LIKE_TYPES = new Set<DeadlineType>(['quiz', 'test', 'exam'])
@@ -46,7 +35,7 @@ export function getEventDeadlineType(event: { type: 'assignment' | 'exam'; deadl
   return normalizeDeadlineType(event.deadlineType, event.type)
 }
 
-export function isExamLikeDeadlineType(type: DeadlineType): boolean {
+function isExamLikeDeadlineType(type: DeadlineType): boolean {
   return EXAM_LIKE_TYPES.has(type)
 }
 
@@ -75,14 +64,6 @@ export function formatCountdown(dateStr: string): string {
   return `${days} days`
 }
 
-export function getUrgencyClass(dateStr: string): 'urgent' | 'warning' | 'calm' {
-  if (!dateStr) return 'calm'
-  const days = getDaysUntil(dateStr)
-  if (days <= 2) return 'urgent'
-  if (days <= 7) return 'warning'
-  return 'calm'
-}
-
 export function isSameCalendarEvent<T extends { title: string; courseCode?: string; date: string; time: string; priority: string; type: string; deadlineType?: string; sourceUploadId?: string }>(left: T, right: T): boolean {
   return (
     left.title === right.title &&
@@ -96,7 +77,7 @@ export function isSameCalendarEvent<T extends { title: string; courseCode?: stri
   )
 }
 
-export function getEventTimestamp(event: { date: string; time: string }): number {
+function getEventTimestamp(event: { date: string; time: string }): number {
   if (!event.date) return Number.MAX_SAFE_INTEGER
   return new Date(`${event.date}T${event.time || '23:59'}`).getTime()
 }

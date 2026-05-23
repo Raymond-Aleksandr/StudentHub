@@ -1,6 +1,7 @@
 import type { CalendarEvent, ClassInfo } from './types'
 import { deadlineTypeToEventType, isSameCalendarEvent, sortEventsByDate } from './deadlines'
 import { inferDurationMinutes, normalizeCourseColor, normalizeDurationMinutes, normalizePercent, normalizeWeight } from './courseMeta'
+import { defaultReminderDaysBefore } from './notifications'
 
 // Course helpers.
 
@@ -8,7 +9,7 @@ export function nextCourseId(classes: ClassInfo[]): number {
   return classes.reduce((max, course) => Math.max(max, course.id), -1) + 1
 }
 
-export function hasCourseContent(course: Partial<ClassInfo>): boolean {
+function hasCourseContent(course: Partial<ClassInfo>): boolean {
   return Boolean(course.title || course.code || course.day || course.startTime || course.location || course.profName)
 }
 
@@ -122,22 +123,8 @@ export function normalizeEvents(events: Partial<CalendarEvent>[], uploadId: stri
         deadlineType,
         sourceUploadId: uploadId,
         completed: false,
-        reminderDaysBefore: event.reminderDaysBefore ?? (type === 'exam' ? 7 : 2),
+        reminderEnabled: event.reminderEnabled !== false,
+        reminderDaysBefore: event.reminderDaysBefore ?? defaultReminderDaysBefore(type),
       }
     })
-}
-
-// Event identity for edit tracking.
-
-export function getEventIdentity(event: CalendarEvent): string {
-  return [
-    event.title,
-    event.courseCode,
-    event.date,
-    event.time,
-    event.priority,
-    event.type,
-    event.deadlineType,
-    event.sourceUploadId,
-  ].join('::')
 }

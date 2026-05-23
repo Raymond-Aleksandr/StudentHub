@@ -6,6 +6,7 @@ import { deadlineTypeToEventType, getEventDeadlineType } from '../domain/deadlin
 import type { SyllabusUpload } from '../domain/types'
 import { getSyllabusParserEndpoint } from '../syllabusParser'
 import { tagVarForColor } from '../domain/courseMeta'
+import { useModalBodyLock } from '../components/useModalBodyLock'
 
 type ParserStatus = {
   tone: 'checking' | 'online' | 'blocked' | 'offline'
@@ -95,6 +96,11 @@ export default function ImportPage() {
     setUploadDraft(null)
   }
 
+  function closeUploadEditor() {
+    setEditingUpload(null)
+    setUploadDraft(null)
+  }
+
   return (
     <>
       <section
@@ -178,65 +184,94 @@ export default function ImportPage() {
       </section>
 
       {editingUpload && uploadDraft && (
-        <div className="modal-backdrop" onClick={(event) => { if (event.target === event.currentTarget) setEditingUpload(null) }}>
-          <div className="modal" role="dialog" aria-label="Edit syllabus">
-            <div className="modal-head">
-              <div>
-                <span className="eyebrow">{uploadDraft.parsedCourse?.code || 'PDF'} · Syllabus</span>
-                <h2 className="serif">Edit syllabus</h2>
-              </div>
-              <button className="tp-close" onClick={() => setEditingUpload(null)} aria-label="Close"><X size={18} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="syllabus-preview" style={{ '--tag': tagVarForColor(uploadDraft.parsedCourse?.color) } as CSSProperties}>
-                <div className="sp-ico"><Sparkles size={20} /></div>
-                <div className="sp-info">
-                  <span className="mono sp-name">{editingUpload.name}</span>
-                  <span className="mono sp-meta">{getUploadCounts(editingUpload).tasks} tasks · {getUploadCounts(editingUpload).exams} exams</span>
-                </div>
-              </div>
-              <section className="modal-section">
-                <label className="modal-section-label">File</label>
-                <div className="modal-input-wrap">
-                  <span className="modal-input-tag mono">Name</span>
-                  <input className="modal-input" value={uploadDraft.name} onChange={(event) => setUploadDraft({ ...uploadDraft, name: event.target.value })} />
-                </div>
-                <div className="modal-input-wrap">
-                  <span className="modal-input-tag mono">Course code</span>
-                  <input
-                    className="modal-input"
-                    value={uploadDraft.parsedCourse?.code ?? ''}
-                    onChange={(event) => setUploadDraft({
-                      ...uploadDraft,
-                      parsedCourse: {
-                        title: uploadDraft.parsedCourse?.title ?? '',
-                        day: uploadDraft.parsedCourse?.day ?? '',
-                        startTime: uploadDraft.parsedCourse?.startTime ?? '',
-                        endTime: uploadDraft.parsedCourse?.endTime ?? '',
-                        location: uploadDraft.parsedCourse?.location ?? '',
-                        profName: uploadDraft.parsedCourse?.profName ?? '',
-                        profEmail: uploadDraft.parsedCourse?.profEmail ?? '',
-                        taName: uploadDraft.parsedCourse?.taName ?? '',
-                        taEmail: uploadDraft.parsedCourse?.taEmail ?? '',
-                        grade: uploadDraft.parsedCourse?.grade ?? null,
-                        progress: uploadDraft.parsedCourse?.progress ?? null,
-                        color: uploadDraft.parsedCourse?.color ?? '',
-                        code: event.target.value,
-                      },
-                    })}
-                    placeholder="Course code"
-                  />
-                </div>
-              </section>
-            </div>
-            <div className="modal-foot three">
-              <button className="modal-btn-delete" onClick={() => { void removeUpload(editingUpload); setEditingUpload(null) }} aria-label="Delete"><Trash2 size={16} /></button>
-              <button className="modal-btn modal-btn-cancel" onClick={() => setEditingUpload(null)}><X size={16} />Cancel</button>
-              <button className="modal-btn modal-btn-save" onClick={() => void saveEdit()} disabled={!uploadDraft.name.trim()}><Check size={16} />Save</button>
-            </div>
-          </div>
-        </div>
+        <SyllabusEditModal
+          editingUpload={editingUpload}
+          uploadDraft={uploadDraft}
+          setUploadDraft={setUploadDraft}
+          onClose={closeUploadEditor}
+          onDelete={() => { void removeUpload(editingUpload); closeUploadEditor() }}
+          onSave={() => void saveEdit()}
+        />
       )}
     </>
+  )
+}
+
+function SyllabusEditModal({
+  editingUpload,
+  uploadDraft,
+  setUploadDraft,
+  onClose,
+  onDelete,
+  onSave,
+}: {
+  editingUpload: SyllabusUpload
+  uploadDraft: SyllabusUpload
+  setUploadDraft: (upload: SyllabusUpload) => void
+  onClose: () => void
+  onDelete: () => void
+  onSave: () => void
+}) {
+  useModalBodyLock()
+
+  return (
+    <div className="modal-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <div className="modal" role="dialog" aria-label="Edit syllabus">
+        <div className="modal-head">
+          <div>
+            <span className="eyebrow">{uploadDraft.parsedCourse?.code || 'PDF'} · Syllabus</span>
+            <h2 className="serif">Edit syllabus</h2>
+          </div>
+          <button className="tp-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+        <div className="modal-body">
+          <div className="syllabus-preview" style={{ '--tag': tagVarForColor(uploadDraft.parsedCourse?.color) } as CSSProperties}>
+            <div className="sp-ico"><Sparkles size={20} /></div>
+            <div className="sp-info">
+              <span className="mono sp-name">{editingUpload.name}</span>
+              <span className="mono sp-meta">{getUploadCounts(editingUpload).tasks} tasks · {getUploadCounts(editingUpload).exams} exams</span>
+            </div>
+          </div>
+          <section className="modal-section">
+            <label className="modal-section-label">File</label>
+            <div className="modal-input-wrap">
+              <span className="modal-input-tag mono">Name</span>
+              <input className="modal-input" value={uploadDraft.name} onChange={(event) => setUploadDraft({ ...uploadDraft, name: event.target.value })} />
+            </div>
+            <div className="modal-input-wrap">
+              <span className="modal-input-tag mono">Course code</span>
+              <input
+                className="modal-input"
+                value={uploadDraft.parsedCourse?.code ?? ''}
+                onChange={(event) => setUploadDraft({
+                  ...uploadDraft,
+                  parsedCourse: {
+                    title: uploadDraft.parsedCourse?.title ?? '',
+                    day: uploadDraft.parsedCourse?.day ?? '',
+                    startTime: uploadDraft.parsedCourse?.startTime ?? '',
+                    endTime: uploadDraft.parsedCourse?.endTime ?? '',
+                    location: uploadDraft.parsedCourse?.location ?? '',
+                    profName: uploadDraft.parsedCourse?.profName ?? '',
+                    profEmail: uploadDraft.parsedCourse?.profEmail ?? '',
+                    taName: uploadDraft.parsedCourse?.taName ?? '',
+                    taEmail: uploadDraft.parsedCourse?.taEmail ?? '',
+                    grade: uploadDraft.parsedCourse?.grade ?? null,
+                    progress: uploadDraft.parsedCourse?.progress ?? null,
+                    color: uploadDraft.parsedCourse?.color ?? '',
+                    code: event.target.value,
+                  },
+                })}
+                placeholder="Course code"
+              />
+            </div>
+          </section>
+        </div>
+        <div className="modal-foot three">
+          <button className="modal-btn-delete" onClick={onDelete} aria-label="Delete"><Trash2 size={16} /></button>
+          <button className="modal-btn modal-btn-cancel" onClick={onClose}><X size={16} />Cancel</button>
+          <button className="modal-btn modal-btn-save" onClick={onSave} disabled={!uploadDraft.name.trim()}><Check size={16} />Save</button>
+        </div>
+      </div>
+    </div>
   )
 }

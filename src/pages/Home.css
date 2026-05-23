@@ -1006,6 +1006,209 @@
   to { transform: translateX(-50%); }
 }
 
+/* Motion layer from the design package: subtle editorial entrance, live preview,
+   and hover feedback without changing the page structure. */
+.landing-nav {
+  animation: landing-nav-in 520ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-kicker {
+  animation: landing-rise 520ms 70ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-kicker span {
+  animation: landing-dot-pulse 1.9s ease-out infinite;
+}
+
+.landing-h1 {
+  animation: landing-rise 620ms 140ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-lede {
+  animation: landing-rise 620ms 220ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-hero-cta {
+  animation: landing-rise 620ms 300ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-phone-wrap {
+  animation: landing-pop 720ms 220ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-phone {
+  animation: landing-phone-float 7s ease-in-out 1s infinite;
+  will-change: transform;
+}
+
+.landing-phone:hover .landing-ps-task {
+  transform: translateX(2px);
+}
+
+.landing-ps-task,
+.landing-ps-tabs span,
+.landing-step,
+.landing-feat,
+.landing-cmp,
+.landing-parsed-row,
+.landing-faq-item summary {
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    color 160ms ease,
+    padding-left 160ms ease;
+}
+
+.landing-ps-tabs .is-active {
+  animation: landing-tab-pop 520ms 850ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-float-card {
+  transform: rotate(var(--float-rotate, 0deg));
+  animation: landing-card-float 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.landing-float-1 { --float-rotate: -5deg; animation-delay: 600ms; }
+.landing-float-2 { --float-rotate: 4deg; animation-delay: 1.2s; }
+.landing-float-3 { --float-rotate: -3deg; animation-delay: 1.8s; }
+
+.landing-strip:hover .landing-strip-track {
+  animation-play-state: paused;
+}
+
+.landing-step:hover {
+  transform: translateX(4px);
+  border-color: var(--line-2);
+}
+
+.landing-doc i,
+.landing-vis-timeline b,
+.landing-vis-courses i {
+  transform-origin: left center;
+  animation: landing-line-fill 3.2s ease-in-out infinite;
+}
+
+.landing-doc i:nth-of-type(2),
+.landing-vis-timeline b:nth-child(2),
+.landing-vis-courses i:nth-child(2) {
+  animation-delay: 180ms;
+}
+
+.landing-doc i:nth-of-type(3),
+.landing-vis-timeline b:nth-child(3),
+.landing-vis-courses i:nth-child(3) {
+  animation-delay: 360ms;
+}
+
+.landing-doc i:nth-of-type(4) { animation-delay: 540ms; }
+.landing-doc i:nth-of-type(5) { animation-delay: 720ms; }
+.landing-doc i:nth-of-type(6) { animation-delay: 900ms; }
+.landing-doc i:nth-of-type(7) { animation-delay: 1080ms; }
+
+.landing-parsed-row {
+  animation: landing-rise 520ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-parsed-row:hover {
+  transform: translateX(3px);
+  background: var(--bg);
+}
+
+.landing-parsed-row:nth-child(2) { animation-delay: 80ms; }
+.landing-parsed-row:nth-child(3) { animation-delay: 160ms; }
+.landing-parsed-row:nth-child(4) { animation-delay: 240ms; }
+.landing-parsed-row:nth-child(5) { animation-delay: 320ms; }
+.landing-parsed-row:nth-child(6) { animation-delay: 400ms; }
+
+.landing-feat:hover {
+  transform: translateY(-3px);
+  background: var(--surface);
+}
+
+.landing-vis-pressure i {
+  animation: landing-dot-breathe 2.6s ease-in-out infinite;
+}
+
+.landing-vis-pressure i:nth-child(2) { animation-delay: 120ms; }
+.landing-vis-pressure i:nth-child(3) { animation-delay: 240ms; }
+.landing-vis-pressure i:nth-child(4) { animation-delay: 360ms; }
+.landing-vis-pressure i:nth-child(5) { animation-delay: 480ms; }
+.landing-vis-pressure i:nth-child(6) { animation-delay: 600ms; }
+.landing-vis-pressure i:nth-child(7) { animation-delay: 720ms; }
+
+.landing-cmp:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-md);
+}
+
+.landing-quote-block {
+  animation: landing-rise 620ms cubic-bezier(.2,.75,.18,1) both;
+}
+
+.landing-quote-meta > div {
+  animation: landing-avatar-pulse 3.4s ease-in-out infinite;
+}
+
+.landing-faq-item summary:hover {
+  color: var(--accent);
+  padding-left: 4px;
+}
+
+@keyframes landing-nav-in {
+  from { transform: translateY(-12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes landing-rise {
+  from { transform: translateY(18px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes landing-pop {
+  from { transform: translateY(18px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes landing-dot-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 45%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 8px color-mix(in oklab, var(--accent) 0%, transparent); }
+}
+
+@keyframes landing-phone-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(-0.35deg); }
+}
+
+@keyframes landing-card-float {
+  0%, 100% { transform: rotate(var(--float-rotate, 0deg)) translateY(0); }
+  50% { transform: rotate(var(--float-rotate, 0deg)) translateY(-8px); }
+}
+
+@keyframes landing-tab-pop {
+  0% { transform: scale(0.88); }
+  65% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes landing-line-fill {
+  0%, 100% { transform: scaleX(0.72); opacity: 0.55; }
+  45%, 70% { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes landing-dot-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+
+@keyframes landing-avatar-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 0%, transparent); }
+  50% { transform: scale(1.04); box-shadow: 0 0 0 8px color-mix(in oklab, var(--accent) 12%, transparent); }
+}
+
 @media (max-width: 620px) {
   .landing-nav-cta .btn-ghost {
     display: none;
@@ -1015,5 +1218,15 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }

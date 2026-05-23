@@ -13,6 +13,7 @@
   background: color-mix(in oklab, var(--surface) 92%, transparent);
   box-shadow: var(--shadow-lg);
   backdrop-filter: saturate(140%) blur(14px);
+  animation: bottom-nav-in 420ms cubic-bezier(.2,.75,.18,1) both;
 }
 
 .studenthub-bottom-nav button {
@@ -32,20 +33,47 @@
 
 .studenthub-bottom-nav button:hover {
   color: var(--ink);
+  transform: translateY(-1px);
 }
 
 .studenthub-bottom-nav button.active {
   color: var(--bg);
   background: var(--ink);
+  animation: bottom-nav-active 260ms cubic-bezier(.2,.75,.18,1);
 }
 
 .studenthub-bottom-nav svg {
   width: 20px;
   height: 20px;
+  transition: transform 160ms ease;
+}
+
+.studenthub-bottom-nav button.active svg {
+  transform: translateY(-1px) scale(1.06);
 }
 
 @media (min-width: 920px) {
   .studenthub-bottom-nav {
     display: none;
+  }
+}
+
+@keyframes bottom-nav-in {
+  from { transform: translateY(18px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bottom-nav-active {
+  0% { transform: scale(0.96); }
+  70% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studenthub-bottom-nav,
+  .studenthub-bottom-nav * {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }

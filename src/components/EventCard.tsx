@@ -5,6 +5,7 @@ import type { CalendarEvent, DraftEvent } from '../domain/types'
 import { formatCountdown, formatDeadlineType, getEventDeadlineType } from '../domain/deadlines'
 import { normalizeWeight, tagForEventCourse } from '../domain/courseMeta'
 import { usePlanner } from '../data/usePlanner'
+import { useModalBodyLock } from './useModalBodyLock'
 
 interface EventCardProps {
   event: CalendarEvent
@@ -81,16 +82,15 @@ export function EventEditModal({ event, initialDraft, title = 'Edit item', onClo
     deadlineType: event ? getEventDeadlineType(event) : 'assignment',
   })
   const isExam = draft.deadlineType === 'exam' || draft.deadlineType === 'test' || draft.deadlineType === 'quiz'
+  useModalBodyLock()
 
   useEffect(() => {
     const onKey = (keyboardEvent: KeyboardEvent) => {
       if (keyboardEvent.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
     return () => {
       window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
     }
   }, [onClose])
 

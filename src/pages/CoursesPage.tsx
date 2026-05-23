@@ -7,6 +7,7 @@ import type { ClassInfo } from '../domain/types'
 import { courseColorOptions, courseMatchesEvent, normalizePercent, splitCourseCodes, tagForCourse, tagVarForColor } from '../domain/courseMeta'
 import { getCourseGrade, getWeightStats } from '../domain/grades'
 import { EventCard } from '../components/EventCard'
+import { useModalBodyLock } from '../components/useModalBodyLock'
 
 function CourseCodePills({ code, tag }: { code: string; tag: string }) {
   const codes = splitCourseCodes(code)
@@ -287,6 +288,8 @@ function CourseEditorModal({
   onSave: () => void
   onDelete?: () => void
 }) {
+  useModalBodyLock()
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose()

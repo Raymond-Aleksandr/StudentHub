@@ -35,6 +35,8 @@ export default function ExamsPage() {
   const [editing, setEditing] = useState<CalendarEvent | 'new' | null>(null)
   const sorted = [...examEvents].filter((event) => !event.completed).sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date))
   const timelineEvents = sorted.filter((event) => event.date)
+  const undatedExams = sorted.filter((event) => !event.date)
+  const hasUndatedExams = undatedExams.length > 0
   const next = sorted[0]
   const daysOut = next ? getDaysUntil(next.date) : 0
   const hasDate = next ? Number.isFinite(daysOut) : false
@@ -43,7 +45,7 @@ export default function ExamsPage() {
     'This week': sorted.filter((event) => event.date && getDaysUntil(event.date) <= 7),
     'In two weeks': sorted.filter((event) => event.date && getDaysUntil(event.date) > 7 && getDaysUntil(event.date) <= 14),
     Later: sorted.filter((event) => event.date && getDaysUntil(event.date) > 14),
-    'Date needed': sorted.filter((event) => !event.date),
+    'Date needed': undatedExams,
   }
 
   return (
@@ -126,13 +128,19 @@ export default function ExamsPage() {
             </div>
           </div>
           <div className="exam-empty-copy">
-            <span className="eyebrow">Timeline is empty</span>
-            <h3>Exams will appear here as soon as you add one.</h3>
-            <p>Import a syllabus to extract assessment dates, or add a test manually.</p>
+            <span className="eyebrow">{hasUndatedExams ? 'Date needed' : 'Timeline is empty'}</span>
+            <h3>{hasUndatedExams ? 'Imported exams need official dates.' : 'Exams will appear here as soon as you add one.'}</h3>
+            <p>{hasUndatedExams ? 'Add the scheduled exam date to place it on the term timeline.' : 'Import a syllabus to extract assessment dates, or add a test manually.'}</p>
           </div>
           <div className="exam-empty-actions">
-            <button className="btn btn-accent" onClick={() => setEditing('new')}><Plus size={15} /> Add exam</button>
-            <button className="btn btn-ghost" onClick={() => navigate('/import')}><FileUp size={15} /> Import</button>
+            {hasUndatedExams ? (
+              <button className="btn btn-accent" onClick={() => setEditing(undatedExams[0])}><Pencil size={15} /> Add date</button>
+            ) : (
+              <>
+                <button className="btn btn-accent" onClick={() => setEditing('new')}><Plus size={15} /> Add exam</button>
+                <button className="btn btn-ghost" onClick={() => navigate('/import')}><FileUp size={15} /> Import</button>
+              </>
+            )}
           </div>
         </section>
       )}

@@ -133,16 +133,16 @@ export default function CoursesPage() {
 
     return (
       <>
-        <div className="topbar course-detail-head">
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, width: '100%', minWidth: 0 }}>
-            <button className="btn btn-soft" style={{ height: 38, width: 38, padding: 0, flexShrink: 0, marginTop: 8 }} onClick={() => setSelectedId(null)} aria-label="Back">
+        <div className="course-detail-head">
+          <div className="course-detail-title-row">
+            <button className="btn btn-soft course-detail-icon" onClick={() => setSelectedId(null)} aria-label="Back">
               <ChevronLeft size={16} />
             </button>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="course-detail-title">
               <span className="eyebrow" style={{ color: tag }}>{selected.code}</span>
-              <h1 style={{ fontSize: 'clamp(28px, 5vw, 52px)', marginTop: 6 }}>{selected.title || 'Untitled course'}</h1>
+              <h1>{selected.title || 'Untitled course'}</h1>
             </div>
-            <button className="btn btn-soft" style={{ height: 38, width: 38, padding: 0, flexShrink: 0, marginTop: 8 }} onClick={() => openCourseEditor(selected)} aria-label="Edit course">
+            <button className="btn btn-soft course-detail-icon" onClick={() => openCourseEditor(selected)} aria-label="Edit course">
               <Pencil size={16} />
             </button>
           </div>
